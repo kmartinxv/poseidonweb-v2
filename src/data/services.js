@@ -1,0 +1,77 @@
+export const services = [
+  {
+    id: 'wellness',
+    title: 'Wellness & Prevention',
+    desc: 'Annual check-ups, parasite control, and health screenings to keep your pet thriving year-round.',
+    icon: 'heart',
+    slug: 'wellness',
+  },
+  {
+    id: 'vaccinations',
+    title: 'Vaccinations',
+    desc: 'Core and lifestyle vaccines administered on schedule to protect against preventable diseases.',
+    icon: 'syringe',
+    slug: 'vaccinations',
+  },
+  {
+    id: 'surgery',
+    title: 'Surgery & Orthopaedics',
+    desc: 'Soft tissue and orthopaedic procedures performed in our fully equipped surgical suite.',
+    icon: 'scalpel',
+    slug: 'surgery',
+  },
+  {
+    id: 'diagnostics',
+    title: 'Lab & Diagnostics',
+    desc: 'In-house blood panels, urinalysis, imaging, and pathology for fast, accurate results.',
+    icon: 'lab',
+    slug: 'diagnostics',
+  },
+  {
+    id: 'dental',
+    title: 'Dental Care',
+    desc: 'Professional cleaning, extractions, and oral health assessments under anaesthesia.',
+    icon: 'tooth',
+    slug: 'dental',
+  },
+  {
+    id: 'emergency',
+    title: 'Emergency Care',
+    desc: 'Same-day urgent appointments for accidents, sudden illness, and critical conditions.',
+    icon: 'emergency',
+    slug: 'emergency',
+  },
+  {
+    id: 'grooming',
+    title: 'Grooming & Hygiene',
+    desc: 'Professional bathing, coat trimming, nail clipping, and ear cleaning in our salon.',
+    icon: 'scissors',
+    slug: 'grooming',
+  },
+  {
+    id: 'boarding',
+    title: 'Boarding & Kennels',
+    desc: 'Safe, comfortable stays with enrichment activities, monitored 24/7 by our kennel team.',
+    icon: 'home',
+    slug: 'boarding',
+  },
+  {
+    id: 'nutrition',
+    title: 'Nutrition Counselling',
+    desc: 'Personalised diet plans for growth, weight management, and chronic disease support.',
+    icon: 'leaf',
+    slug: 'nutrition',
+  },
+]
+
+export const serviceIconPaths = {
+  heart: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+  syringe: 'M18 2l4 4-4 4M9 11l4-4M2 20l9-9M14 5l5 5',
+  scalpel: 'M3 3l18 18M8.5 8.5l7 7M3 21l4-4',
+  lab: 'M9 3h6v7l3 9H6l3-9V3zM6 9h12',
+  tooth: 'M12 2C9 2 7 4 7 7c0 2 1 3.5 1 5 0 3 1 6 4 6s4-3 4-6c0-1.5 1-3 1-5 0-3-2-5-5-5z',
+  emergency: 'M12 2v20M2 12h20',
+  scissors: 'M6 9L3 6a3 3 0 0 1 4.24-4.24L12 6.52l4.76-4.76A3 3 0 0 1 21 6l-3 3M6 15l-3 3a3 3 0 0 0 4.24 4.24L12 17.48l4.76 4.76A3 3 0 0 0 21 18l-3-3M12 6.52l-1 1 1 1 1-1-1-1zm0 9l-1 1 1 1 1-1-1-1z',
+  home: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  leaf: 'M17 8C8 10 5.9 16.17 3.82 22l1.71.91C7 20 9 18 12 18c3 0 4.93-2.44 6.32-5.5C20 9.5 18 5 17 8z',
+}

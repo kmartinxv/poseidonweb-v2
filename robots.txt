@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /portal.html
+Disallow: /cart.html
+Disallow: /checkout.html
+
+# Sitemap location
+Sitemap: https://poseidonvet.co.ke/sitemap.xml
+
+# Crawl delay (be gentle)
+Crawl-delay: 5
