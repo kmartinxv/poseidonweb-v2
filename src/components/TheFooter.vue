@@ -75,6 +75,10 @@
       <!-- Bottom bar -->
       <div class="footer-bottom">
         <p>&copy; {{ year }} Poseidon Veterinary Clinic. All rights reserved.</p>
+        <p class="footer-credit">
+          Designed &amp; developed by
+          <a href="https://arton.co.ke" target="_blank" rel="noopener">Arton Limited</a>
+        </p>
         <div class="footer-legal">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>
@@ -190,6 +194,10 @@ const serviceLinks = [
 .footer-legal { display: flex; gap: 20px; }
 .footer-legal a { color: rgba(255,255,255,0.4); }
 .footer-legal a:hover { color: rgba(255,255,255,0.7); }
+
+.footer-credit { color: rgba(255,255,255,0.4); }
+.footer-credit a { color: rgba(255,255,255,0.65); font-weight: 600; transition: color var(--transition); }
+.footer-credit a:hover { color: var(--teal); }
 
 @media (max-width: 1024px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
