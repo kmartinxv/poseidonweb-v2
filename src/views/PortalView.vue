@@ -5,7 +5,16 @@
     <div v-if="!loggedIn" class="login-split">
       <div class="login-left">
         <div class="login-brand">
-          <img src="/Images/Poseidon/logo_horizontal_print_no_bg.png" alt="Poseidon Veterinary Clinic" class="login-brand-img" />
+          <svg class="login-logo-mark" viewBox="0 0 100 100" fill="none">
+            <ellipse cx="50" cy="62" rx="26" ry="22" stroke="#E02020" stroke-width="6" stroke-linecap="round"/>
+            <ellipse cx="32" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="50" cy="29" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="68" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="19" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+            <ellipse cx="81" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+            <path d="M50 72 C46 67, 38 63, 38 57 C38 52, 50 52, 50 59 C50 52, 62 52, 62 57 C62 63, 54 67, 50 72Z" stroke="#E02020" stroke-width="5" stroke-linejoin="round"/>
+          </svg>
+          <span class="login-brand-word">poseidonvet</span>
           <span class="login-brand-portal">Client Portal</span>
         </div>
 
@@ -77,18 +86,17 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sb-head">
-          <div class="sb-logo-mark">
-            <svg viewBox="0 0 44 44" fill="none">
-              <circle cx="22" cy="22" r="22" fill="var(--teal)"/>
-              <ellipse cx="15" cy="14" rx="3.2" ry="4.2" fill="white" opacity="0.9"/>
-              <ellipse cx="29" cy="14" rx="3.2" ry="4.2" fill="white" opacity="0.9"/>
-              <ellipse cx="10" cy="21" rx="2.6" ry="3.6" fill="white" opacity="0.9"/>
-              <ellipse cx="34" cy="21" rx="2.6" ry="3.6" fill="white" opacity="0.9"/>
-              <path d="M22 20c-5.5 0-8.5 3.2-8.5 6.5s2.5 5.5 8.5 5.5 8.5-2.2 8.5-5.5-3-6.5-8.5-6.5z" fill="white"/>
-            </svg>
-          </div>
+          <svg class="sb-logo-mark" viewBox="0 0 100 100" fill="none">
+            <ellipse cx="50" cy="62" rx="26" ry="22" stroke="#E02020" stroke-width="6" stroke-linecap="round"/>
+            <ellipse cx="32" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="50" cy="29" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="68" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+            <ellipse cx="19" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+            <ellipse cx="81" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+            <path d="M50 72 C46 67, 38 63, 38 57 C38 52, 50 52, 50 59 C50 52, 62 52, 62 57 C62 63, 54 67, 50 72Z" stroke="#E02020" stroke-width="5" stroke-linejoin="round"/>
+          </svg>
           <div class="sb-brand-text">
-            <strong>Poseidon</strong>
+            <strong>poseidonvet</strong>
             <span>Client Portal</span>
           </div>
         </div>
@@ -745,11 +753,12 @@ const loginStats = [
   overflow-y: auto;
 }
 .login-brand {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 10px;
   padding: 32px 48px 0;
 }
-.login-brand-img { height: 34px; width: auto; display: block; }
-.login-brand-portal { font-size: 0.68rem; color: var(--teal); font-weight: 700; letter-spacing: 0.04em; padding: 3px 9px; background: var(--teal-light); border-radius: 100px; }
+.login-logo-mark { width: 30px; height: 30px; flex-shrink: 0; }
+.login-brand-word { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; color: var(--navy); }
+.login-brand-portal { font-size: 0.68rem; color: var(--teal); font-weight: 700; letter-spacing: 0.04em; padding: 3px 9px; background: var(--teal-light); border-radius: 100px; margin-left: 4px; }
 
 .login-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 48px 48px; }
 .login-body h1 { font-size: 1.6rem; margin-bottom: 8px; }
@@ -812,8 +821,7 @@ const loginStats = [
   padding: 22px 20px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-.sb-logo-mark { width: 34px; height: 34px; flex-shrink: 0; }
-.sb-logo-mark svg { width: 100%; height: 100%; }
+.sb-logo-mark { width: 30px; height: 30px; flex-shrink: 0; }
 .sb-brand-text strong { display: block; font-size: 0.78rem; font-weight: 800; color: white; letter-spacing: 0.05em; }
 .sb-brand-text span   { display: block; font-size: 0.62rem; color: rgba(255,255,255,0.35); }
 

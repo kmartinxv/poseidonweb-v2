@@ -4,7 +4,16 @@
 
       <!-- Logo -->
       <RouterLink to="/" class="nav-logo">
-        <img src="/Images/Poseidon/logo_horizontal_print_no_bg.png" alt="Poseidon Veterinary Clinic" class="nav-logo-img" />
+        <svg class="logo-paw" viewBox="0 0 100 100" fill="none">
+          <ellipse cx="50" cy="62" rx="26" ry="22" stroke="#E02020" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="32" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+          <ellipse cx="50" cy="29" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+          <ellipse cx="68" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+          <ellipse cx="19" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+          <ellipse cx="81" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+          <path d="M50 72 C46 67, 38 63, 38 57 C38 52, 50 52, 50 59 C50 52, 62 52, 62 57 C62 63, 54 67, 50 72Z" stroke="#E02020" stroke-width="5" stroke-linejoin="round"/>
+        </svg>
+        <span class="logo-word">poseidonvet</span>
       </RouterLink>
 
       <!-- Nav links -->
@@ -107,10 +116,17 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
 .nav-logo {
   display: flex;
   align-items: center;
+  gap: 9px;
   text-decoration: none;
   flex-shrink: 0;
 }
-.nav-logo-img { height: 42px; width: auto; display: block; }
+.nav-logo .logo-paw { width: 34px; height: 34px; flex-shrink: 0; }
+.nav-logo .logo-word {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--navy);
+}
 
 /* Nav links */
 .nav-links {

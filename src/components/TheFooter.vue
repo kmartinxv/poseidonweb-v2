@@ -6,20 +6,16 @@
         <!-- Brand -->
         <div class="footer-brand">
           <RouterLink to="/" class="footer-logo">
-            <div class="logo-paw-sm">
-              <svg viewBox="0 0 40 40" fill="none">
-                <circle cx="20" cy="20" r="20" fill="var(--teal)"/>
-                <ellipse cx="14" cy="13" rx="3" ry="4" fill="white" opacity="0.9"/>
-                <ellipse cx="26" cy="13" rx="3" ry="4" fill="white" opacity="0.9"/>
-                <ellipse cx="9"  cy="19" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-                <ellipse cx="31" cy="19" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-                <path d="M20 18c-5 0-8 3-8 6s2 5 8 5 8-2 8-5-3-6-8-6z" fill="white"/>
-              </svg>
-            </div>
-            <div>
-              <span class="footer-logo-name">POSEIDON</span>
-              <span class="footer-logo-sub">Veterinary Clinic</span>
-            </div>
+            <svg class="logo-paw-sm" viewBox="0 0 100 100" fill="none">
+              <ellipse cx="50" cy="62" rx="26" ry="22" stroke="#E02020" stroke-width="6" stroke-linecap="round"/>
+              <ellipse cx="32" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+              <ellipse cx="50" cy="29" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+              <ellipse cx="68" cy="36" rx="9" ry="12" stroke="#E02020" stroke-width="5.5" stroke-linecap="round"/>
+              <ellipse cx="19" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+              <ellipse cx="81" cy="50" rx="8" ry="11" stroke="#E02020" stroke-width="5" stroke-linecap="round"/>
+              <path d="M50 72 C46 67, 38 63, 38 57 C38 52, 50 52, 50 59 C50 52, 62 52, 62 57 C62 63, 54 67, 50 72Z" stroke="#E02020" stroke-width="5" stroke-linejoin="round"/>
+            </svg>
+            <span class="footer-logo-word">poseidonvet</span>
           </RouterLink>
           <p class="footer-tagline">Compassionate, expert veterinary care for every beloved pet in Nairobi and beyond.</p>
           <div class="social-links">
@@ -129,21 +125,12 @@ const serviceLinks = [
   text-decoration: none;
   margin-bottom: 16px;
 }
-.logo-paw-sm { width: 36px; height: 36px; flex-shrink: 0; }
-.logo-paw-sm svg { width: 100%; height: 100%; }
-.footer-logo-name {
-  display: block;
-  font-size: 0.8rem;
+.logo-paw-sm { width: 30px; height: 30px; flex-shrink: 0; }
+.footer-logo-word {
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
   color: white;
-}
-.footer-logo-sub {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--teal);
-  font-weight: 600;
-  letter-spacing: 0.04em;
 }
 .footer-tagline { font-size: 0.875rem; line-height: 1.6; margin-bottom: 20px; max-width: 280px; }
 
