@@ -2,7 +2,7 @@
   <div class="portal-root">
 
     <!-- ═══════════ LOGIN ═══════════ -->
-    <div v-if="!loggedIn" class="login-split">
+    <div v-if="!isLoggedIn" class="login-split">
       <div class="login-left">
         <div class="login-brand">
           <svg class="login-logo-mark" viewBox="0 0 100 100" fill="none">
@@ -19,47 +19,109 @@
         </div>
 
         <div class="login-body">
-          <h1>Sign in to your account</h1>
-          <p>Access your pet's health records, appointments, and prescriptions.</p>
+          <template v-if="authLoading">
+            <p class="text-light">Loading…</p>
+          </template>
 
-          <form @submit.prevent="login" class="login-form">
-            <div class="form-group">
-              <label class="form-label">Email address</label>
-              <div class="input-icon-wrap">
-                <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                <input class="form-control icon-left" type="email" v-model="creds.email" placeholder="you@example.com" autocomplete="email" required />
+          <template v-else-if="authStage === 'identifier'">
+            <h1>Sign in to your account</h1>
+            <p>Access your pet's health records, appointments, and invoices.</p>
+
+            <form @submit.prevent="handleIdentify" class="login-form">
+              <div class="form-group">
+                <label class="form-label">Phone number or email</label>
+                <div class="input-icon-wrap">
+                  <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <input class="form-control icon-left" v-model.trim="identifier" placeholder="0712 345 678 or you@example.com" required autofocus />
+                </div>
               </div>
-            </div>
 
-            <div class="form-group" style="margin-top:16px">
-              <label class="form-label">Password</label>
-              <div class="input-icon-wrap pw-wrap">
-                <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input :type="showPw ? 'text' : 'password'" class="form-control icon-left" v-model="creds.password" placeholder="••••••••" autocomplete="current-password" required />
-                <button type="button" class="pw-toggle" @click="showPw = !showPw">
-                  <svg v-if="!showPw" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <svg v-else       width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                </button>
+              <div v-if="authError" class="login-error">{{ authError }}</div>
+
+              <button type="submit" class="btn btn-primary login-btn" :disabled="submitting">
+                {{ submitting ? 'Checking…' : 'Continue' }}
+              </button>
+            </form>
+
+            <div class="login-divider"><span>or</span></div>
+            <RouterLink to="/appointments" class="btn btn-secondary" style="width:100%;justify-content:center">Book Without Account</RouterLink>
+          </template>
+
+          <template v-else-if="authStage === 'password'">
+            <h1>Enter your password</h1>
+            <p>{{ identifier }}</p>
+
+            <form @submit.prevent="handleClientLogin" class="login-form">
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" v-model="password" placeholder="••••••••" required autofocus />
               </div>
+
+              <div v-if="authError" class="login-error">{{ authError }}</div>
+
+              <button type="submit" class="btn btn-primary login-btn" :disabled="submitting">
+                {{ submitting ? 'Signing in…' : 'Sign In' }}
+              </button>
+            </form>
+
+            <div class="otp-actions">
+              <button type="button" class="link-btn" @click="backToIdentifier">← Use a different number/email</button>
+              <button type="button" class="link-btn" :disabled="submitting" @click="handleRequestOtp">Forgot password? Use a code instead</button>
             </div>
+          </template>
 
-            <div class="login-meta">
-              <label class="remember-label"><input type="checkbox" v-model="remember" /><span>Remember me</span></label>
-              <a href="#" class="forgot-link">Forgot password?</a>
+          <template v-else-if="authStage === 'otp'">
+            <h1>Enter your code</h1>
+            <p>We sent a 6-digit code to <strong>{{ maskedDestination }}</strong>.</p>
+
+            <form @submit.prevent="handleVerifyOtp" class="login-form">
+              <div class="form-group">
+                <label class="form-label">6-digit code</label>
+                <input
+                  class="form-control otp-input"
+                  v-model.trim="code"
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder="••••••"
+                  required
+                  autofocus
+                />
+              </div>
+
+              <div v-if="authError" class="login-error">{{ authError }}</div>
+
+              <button type="submit" class="btn btn-primary login-btn" :disabled="submitting">
+                {{ submitting ? 'Verifying…' : 'Verify' }}
+              </button>
+            </form>
+
+            <div class="otp-actions">
+              <button type="button" class="link-btn" @click="backToIdentifier">← Use a different number/email</button>
+              <button type="button" class="link-btn" :disabled="submitting" @click="handleRequestOtp">Resend code</button>
             </div>
+          </template>
 
-            <div v-if="loginError" class="login-error">{{ loginError }}</div>
+          <template v-else-if="authStage === 'set-password'">
+            <h1>{{ hasPassword ? 'Reset your password' : 'Set your password' }}</h1>
+            <p>{{ hasPassword ? 'Choose a new password for next time.' : 'Create a password so you can skip the code next time.' }}</p>
 
-            <button type="submit" class="btn btn-primary login-btn">Sign In</button>
-          </form>
+            <form @submit.prevent="handleSetPassword" class="login-form">
+              <div class="form-group">
+                <label class="form-label">New password</label>
+                <input type="password" class="form-control" v-model="password" placeholder="At least 8 characters" required autofocus minlength="8" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm password</label>
+                <input type="password" class="form-control" v-model="passwordConfirmation" placeholder="Repeat password" required minlength="8" />
+              </div>
 
-          <div class="login-divider"><span>or</span></div>
-          <RouterLink to="/appointments" class="btn btn-secondary" style="width:100%;justify-content:center">Book Without Account</RouterLink>
+              <div v-if="authError" class="login-error">{{ authError }}</div>
 
-          <div class="demo-pill">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
-            Demo — any email + password <code>demo1234</code>
-          </div>
+              <button type="submit" class="btn btn-primary login-btn" :disabled="submitting">
+                {{ submitting ? 'Saving…' : 'Save & Continue' }}
+              </button>
+            </form>
+          </template>
         </div>
       </div>
 
@@ -83,8 +145,11 @@
     <!-- ═══════════ DASHBOARD ═══════════ -->
     <div v-else class="dash-layout">
 
+      <!-- Mobile sidebar backdrop -->
+      <div v-if="mobileNavOpen" class="mobile-nav-backdrop" @click="mobileNavOpen = false"></div>
+
       <!-- Sidebar -->
-      <aside class="sidebar">
+      <aside class="sidebar" :class="{ 'mobile-open': mobileNavOpen }">
         <div class="sb-head">
           <svg class="sb-logo-mark" viewBox="0 0 100 100" fill="none">
             <ellipse cx="50" cy="62" rx="26" ry="22" stroke="#E02020" stroke-width="6" stroke-linecap="round"/>
@@ -147,22 +212,27 @@
         <!-- Top bar -->
         <header class="dash-topbar">
           <div class="topbar-left">
-            <p class="topbar-eyebrow">CLIENT PORTAL</p>
-            <h2 class="topbar-title">{{ currentLabel }}</h2>
+            <button class="dash-hamburger" aria-label="Open menu" @click="mobileNavOpen = true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="topbar-title-group">
+              <p class="topbar-eyebrow">CLIENT PORTAL</p>
+              <h2 class="topbar-title">{{ currentLabel }}</h2>
+            </div>
           </div>
           <div class="topbar-right">
             <RouterLink to="/cart" class="tb-icon-btn" title="Cart">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </RouterLink>
-            <button class="tb-icon-btn" title="Notifications">
+            <button class="tb-icon-btn" title="Notifications" @click="activeSection = 'notifications'">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span class="tb-dot"></span>
+              <span v-if="notifications.length" class="tb-dot"></span>
             </button>
             <div class="tb-user" @click="activeSection = 'settings'">
-              <span class="tb-user-name">{{ userName }}</span>
+              <span class="tb-user-name">{{ client.full_name }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <button class="tb-signout-btn" @click="loggedIn = false" title="Sign out">
+            <button class="tb-signout-btn" @click="handleLogout" title="Sign out">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
           </div>
@@ -179,8 +249,12 @@
               <div class="wb-bg"></div>
               <div class="wb-content">
                 <p class="wb-eyebrow">WELCOME BACK</p>
-                <h2>Good morning, {{ userName }} 👋</h2>
-                <p>Max's dental check-up is due in 3 days. <a href="#" @click.prevent="activeSection='appointments'" class="wb-link">Book now →</a></p>
+                <h2>{{ greeting }}, {{ firstName }} 👋</h2>
+                <p v-if="topNotification">
+                  {{ topNotification.title }}.
+                  <a href="#" @click.prevent="activeSection = 'notifications'" class="wb-link">View →</a>
+                </p>
+                <p v-else>Everything looks up to date with your pets.</p>
               </div>
               <button class="btn wb-btn" @click="activeSection='appointments'">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -221,37 +295,35 @@
                   <h3>My Pets</h3>
                   <button class="panel-more" @click="activeSection = 'pets'">Manage →</button>
                 </div>
-                <div class="pet-list">
-                  <div class="pet-row" v-for="p in pets" :key="p.name" @click="activeSection = 'pets'">
-                    <div class="pet-avatar-wrap" :style="{ background: p.avatarBg }">
-                      <img :src="p.image" :alt="p.name" />
-                    </div>
+                <div v-if="petsLoading" class="empty-hint">Loading…</div>
+                <div v-else-if="!pets.length" class="empty-hint">No pets on file yet.</div>
+                <div v-else class="pet-list">
+                  <div class="pet-row" v-for="p in pets" :key="p.id" @click="activeSection = 'pets'">
+                    <div class="pet-avatar-wrap pet-avatar-fallback">{{ p.name?.[0] || '?' }}</div>
                     <div class="pet-info">
                       <strong>{{ p.name }}</strong>
-                      <small>{{ p.breed }} · {{ p.age }} · {{ p.sex }}</small>
+                      <small>{{ p.breed || p.species }} · {{ p.age || 'age unknown' }} · {{ sexLabel(p.sex) }}</small>
                     </div>
-                    <span :class="['pet-vacc-badge', p.vaccStatus]">
-                      <svg v-if="p.vaccStatus === 'vaccinated'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      {{ p.vaccStatus === 'vaccinated' ? 'VACCINATED' : 'DUE' }}
-                    </span>
+                    <span v-if="p.is_deceased" class="pet-vacc-badge due">DECEASED</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Health Reminders -->
+              <!-- Notifications -->
               <div class="ov-panel">
                 <div class="ov-panel-head">
-                  <h3>Health Reminders</h3>
-                  <button class="panel-more" @click="activeSection = 'records'">View all →</button>
+                  <h3>Notifications</h3>
+                  <button class="panel-more" @click="activeSection = 'notifications'">View all →</button>
                 </div>
-                <div class="reminder-list">
-                  <div class="reminder-row" v-for="r in reminders" :key="r.title">
-                    <div class="reminder-dot" :class="r.urgency"></div>
+                <div v-if="notificationsLoading" class="empty-hint">Loading…</div>
+                <div v-else-if="!notifications.length" class="empty-hint">You're all caught up.</div>
+                <div v-else class="reminder-list">
+                  <div class="reminder-row" v-for="n in notifications.slice(0, 4)" :key="n.id">
+                    <div class="reminder-dot" :class="urgencyClass(n.urgency)"></div>
                     <div class="reminder-info">
-                      <strong>{{ r.title }}</strong>
-                      <small>{{ r.detail }}</small>
+                      <strong>{{ n.title }}</strong>
+                      <small>{{ n.body }}</small>
                     </div>
-                    <button class="reminder-book" @click="activeSection = 'appointments'">Book</button>
                   </div>
                 </div>
               </div>
@@ -264,17 +336,19 @@
                 <h3>Upcoming Appointments</h3>
                 <button class="panel-more" @click="activeSection = 'appointments'">View all →</button>
               </div>
-              <div class="appt-list">
-                <div class="appt-row" v-for="a in upcomingAppts" :key="a.id">
+              <div v-if="apptsLoading" class="empty-hint">Loading…</div>
+              <div v-else-if="!upcomingAppts.length" class="empty-hint">No upcoming appointments. <RouterLink to="/appointments" class="wb-link">Book one →</RouterLink></div>
+              <div v-else class="appt-list">
+                <div class="appt-row" v-for="a in upcomingAppts.slice(0, 5)" :key="a.id">
                   <div class="appt-date-block">
-                    <span class="appt-month">{{ a.month }}</span>
-                    <span class="appt-day">{{ a.day }}</span>
+                    <span class="appt-month">{{ formatMonth(a.appointment_date) }}</span>
+                    <span class="appt-day">{{ formatDay(a.appointment_date) }}</span>
                   </div>
                   <div class="appt-info">
-                    <strong>{{ a.service }}</strong>
-                    <small>{{ a.time }} · Dr. {{ a.vet }} · {{ a.pet }}</small>
+                    <strong>{{ a.service_type || 'Appointment' }}</strong>
+                    <small>{{ formatTime(a.appointment_time) }} · {{ a.doctor ? `Dr. ${a.doctor.name}` : 'Doctor TBC' }} · {{ a.pet?.name }}</small>
                   </div>
-                  <span :class="['status-chip', a.status]">{{ a.status }}</span>
+                  <span :class="['status-chip', statusClass(a.status)]">{{ a.status.replace('_', ' ').toLowerCase() }}</span>
                 </div>
               </div>
             </div>
@@ -283,37 +357,36 @@
 
           <!-- ── MY PETS ── -->
           <div v-if="activeSection === 'pets'" class="pane">
-            <div class="pets-detail-grid">
-              <div class="pet-profile-card" v-for="p in pets" :key="p.name">
-                <div class="pp-cover" :style="{ background: p.headerGradient }">
-                  <img :src="p.image" :alt="p.name" class="pp-avatar" />
-                  <span :class="['pp-health-badge', p.vaccStatus]">
-                    {{ p.vaccStatus === 'vaccinated' ? '✓ Vaccinated' : '! Due' }}
-                  </span>
+            <div v-if="petsLoading" class="empty-hint">Loading pets…</div>
+            <div v-else-if="!pets.length" class="empty-state-block">No pets on file yet. Give us a call and we'll add your pet's records.</div>
+            <div v-else class="pets-detail-grid">
+              <div class="pet-profile-card" v-for="p in pets" :key="p.id">
+                <div class="pp-cover" :style="{ background: 'linear-gradient(135deg, #0BBFB2 0%, #0D2B4B 100%)' }">
+                  <div class="pp-avatar pet-avatar-fallback pp-avatar-lg">{{ p.name?.[0] || '?' }}</div>
+                  <span v-if="p.is_deceased" class="pp-health-badge due">Deceased</span>
                 </div>
                 <div class="pp-body">
                   <h3>{{ p.name }}</h3>
-                  <p class="pp-sub">{{ p.species }} · {{ p.breed }}</p>
+                  <p class="pp-sub">{{ p.species }}{{ p.breed ? ` · ${p.breed}` : '' }}</p>
                   <div class="pp-attrs">
-                    <div class="pp-attr" v-for="(val, key) in p.attrs" :key="key">
-                      <span class="pp-attr-key">{{ key }}</span>
-                      <span class="pp-attr-val">{{ val }}</span>
-                    </div>
+                    <div class="pp-attr"><span class="pp-attr-key">Age</span><span class="pp-attr-val">{{ p.age || '—' }}</span></div>
+                    <div class="pp-attr"><span class="pp-attr-key">Sex</span><span class="pp-attr-val">{{ sexLabel(p.sex) }}</span></div>
+                    <div class="pp-attr"><span class="pp-attr-key">Weight</span><span class="pp-attr-val">{{ p.weight_kg ? `${p.weight_kg} kg` : '—' }}</span></div>
+                    <div class="pp-attr"><span class="pp-attr-key">Colour</span><span class="pp-attr-val">{{ p.color || '—' }}</span></div>
+                    <div class="pp-attr"><span class="pp-attr-key">Microchip</span><span class="pp-attr-val">{{ p.microchip || '—' }}</span></div>
+                    <div class="pp-attr"><span class="pp-attr-key">Patient No.</span><span class="pp-attr-val">{{ p.patient_no || '—' }}</span></div>
                   </div>
                   <div class="pp-divider"></div>
-                  <p class="pp-section-label">Vaccinations</p>
-                  <div class="pp-vacc-list">
-                    <div class="pp-vacc-item" v-for="v in p.vaccinations" :key="v.name">
-                      <span>{{ v.name }}</span>
-                      <div class="pp-vacc-right">
-                        <span class="pp-vacc-date">{{ v.date }}</span>
-                        <span :class="['pp-vacc-status', v.status]">{{ v.status.replace('-', ' ') }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <p class="pp-section-label">Allergies</p>
+                  <p class="pp-notes">{{ p.allergies?.length ? p.allergies.join(', ') : 'None on file' }}</p>
                   <div class="pp-divider"></div>
-                  <p class="pp-section-label">Allergies &amp; Notes</p>
-                  <p class="pp-notes">{{ p.notes }}</p>
+                  <p class="pp-section-label">Chronic Conditions</p>
+                  <p class="pp-notes">{{ p.chronic_conditions?.length ? p.chronic_conditions.join(', ') : 'None on file' }}</p>
+                  <template v-if="p.notes">
+                    <div class="pp-divider"></div>
+                    <p class="pp-section-label">Notes</p>
+                    <p class="pp-notes">{{ p.notes }}</p>
+                  </template>
                 </div>
               </div>
             </div>
@@ -323,9 +396,10 @@
           <div v-if="activeSection === 'appointments'" class="pane">
             <div class="tab-row">
               <button :class="['tab-btn', { active: apptTab === 'upcoming' }]" @click="apptTab = 'upcoming'">Upcoming ({{ upcomingAppts.length }})</button>
-              <button :class="['tab-btn', { active: apptTab === 'past' }]"     @click="apptTab = 'past'">Past History</button>
+              <button :class="['tab-btn', { active: apptTab === 'past' }]"     @click="apptTab = 'past'">Past History ({{ pastAppts.length }})</button>
             </div>
-            <div class="table-card">
+            <div v-if="apptsLoading" class="empty-hint">Loading appointments…</div>
+            <div v-else class="table-card">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -334,12 +408,15 @@
                 </thead>
                 <tbody>
                   <tr v-for="a in (apptTab === 'upcoming' ? upcomingAppts : pastAppts)" :key="a.id">
-                    <td><strong>{{ a.date }}</strong><small style="display:block;color:var(--text-light)">{{ a.time }}</small></td>
-                    <td>{{ a.service }}</td>
-                    <td><span class="pet-chip">{{ a.pet }}</span></td>
-                    <td>Dr. {{ a.vet }}</td>
-                    <td><span :class="['status-chip', a.status]">{{ a.status }}</span></td>
+                    <td><strong>{{ formatDate(a.appointment_date) }}</strong><small style="display:block;color:var(--text-light)">{{ formatTime(a.appointment_time) }}</small></td>
+                    <td>{{ a.service_type || '—' }}</td>
+                    <td><span class="pet-chip">{{ a.pet?.name || '—' }}</span></td>
+                    <td>{{ a.doctor ? `Dr. ${a.doctor.name}` : '—' }}</td>
+                    <td><span :class="['status-chip', statusClass(a.status)]">{{ a.status.replace('_', ' ').toLowerCase() }}</span></td>
                     <td style="font-size:0.8rem;color:var(--text-light)">{{ a.notes || '—' }}</td>
+                  </tr>
+                  <tr v-if="(apptTab === 'upcoming' ? upcomingAppts : pastAppts).length === 0">
+                    <td colspan="6" class="empty-hint">No {{ apptTab }} appointments.</td>
                   </tr>
                 </tbody>
               </table>
@@ -352,24 +429,25 @@
 
           <!-- ── HEALTH RECORDS ── -->
           <div v-if="activeSection === 'records'" class="pane">
-            <div class="records-cols">
+            <div v-if="recordsLoading" class="empty-hint">Loading health records…</div>
+            <div v-else class="records-cols">
               <div class="records-left">
                 <h3 class="records-heading">Health Timeline</h3>
-                <div class="timeline">
-                  <div class="tl-item" v-for="r in medRecords" :key="r.id">
-                    <div class="tl-marker" :class="r.type"></div>
-                    <div class="tl-stem"></div>
+                <div v-if="!medicalRecords.length" class="empty-hint">No finalized visit records yet.</div>
+                <div v-else class="timeline">
+                  <div class="tl-item" v-for="r in medicalRecords" :key="r.id">
+                    <div class="tl-marker wellness"></div>
                     <div class="tl-body">
-                      <p class="tl-date">{{ r.date }}</p>
+                      <p class="tl-date">{{ formatDate(r.visit_date) }}</p>
                       <div class="tl-card">
                         <div class="tl-card-head">
-                          <strong>{{ r.title }}</strong>
-                          <span :class="['type-chip', r.type]">{{ r.type }}</span>
+                          <strong>{{ r.chief_complaint }}</strong>
                         </div>
-                        <p class="tl-meta">{{ r.pet }} · Dr. {{ r.vet }}</p>
-                        <p class="tl-notes">{{ r.notes }}</p>
-                        <div v-if="r.findings" class="tl-tags">
-                          <span class="tl-tag" v-for="f in r.findings" :key="f">{{ f }}</span>
+                        <p class="tl-meta">{{ r.pet?.name }}{{ r.doctor ? ` · Dr. ${r.doctor.name}` : '' }}</p>
+                        <p class="tl-notes" v-if="r.assessment"><strong>Assessment:</strong> {{ r.assessment }}</p>
+                        <p class="tl-notes" v-if="r.plan"><strong>Plan:</strong> {{ r.plan }}</p>
+                        <div v-if="Object.keys(r.vitals || {}).length" class="tl-tags">
+                          <span class="tl-tag" v-for="(val, key) in r.vitals" :key="key">{{ key.replace('_', ' ') }}: {{ val }}</span>
                         </div>
                       </div>
                     </div>
@@ -377,18 +455,15 @@
                 </div>
               </div>
               <div class="records-right">
-                <h3 class="records-heading">Vaccination Schedule</h3>
-                <div class="vacc-schedule" v-for="p in pets" :key="p.name">
+                <h3 class="records-heading">Pet Quick Facts</h3>
+                <div class="vacc-schedule" v-for="p in pets" :key="p.id">
                   <div class="vs-pet-head">
-                    <img :src="p.image" :alt="p.name" class="vs-avatar" />
+                    <div class="pet-avatar-fallback vs-avatar">{{ p.name?.[0] || '?' }}</div>
                     <strong>{{ p.name }}</strong>
                   </div>
                   <div class="vs-rows">
-                    <div class="vs-row" v-for="v in p.vaccinations" :key="v.name">
-                      <span class="vs-name">{{ v.name }}</span>
-                      <span class="vs-date">{{ v.date }}</span>
-                      <span :class="['vs-chip', v.status]">{{ v.status.replace('-', ' ') }}</span>
-                    </div>
+                    <div class="vs-row"><span class="vs-name">Allergies</span><span class="vs-date">{{ p.allergies?.length ? p.allergies.join(', ') : 'None' }}</span></div>
+                    <div class="vs-row"><span class="vs-name">Chronic conditions</span><span class="vs-date">{{ p.chronic_conditions?.length ? p.chronic_conditions.join(', ') : 'None' }}</span></div>
                   </div>
                 </div>
               </div>
@@ -397,92 +472,54 @@
 
           <!-- ── PRESCRIPTIONS ── -->
           <div v-if="activeSection === 'prescriptions'" class="pane">
-            <div class="rx-grid">
+            <div v-if="prescriptionsLoading" class="empty-hint">Loading prescriptions…</div>
+            <div v-else-if="!prescriptions.length" class="empty-state-block">No prescriptions on file.</div>
+            <div v-else class="rx-grid">
               <div class="rx-card" v-for="rx in prescriptions" :key="rx.id">
                 <div class="rx-head">
-                  <div class="rx-icon-wrap" :class="rx.status">
+                  <div class="rx-icon-wrap" :class="rx.status === 'dispensed' ? 'active' : 'expired'">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
                   </div>
                   <div class="rx-head-info">
-                    <strong>{{ rx.medication }}</strong>
-                    <small>For {{ rx.pet }}</small>
+                    <strong>{{ rx.prescription_no }}</strong>
+                    <small>For {{ rx.pet?.name }} · {{ formatDate(rx.issued_date) }}</small>
                   </div>
-                  <span :class="['rx-chip', rx.status]">{{ rx.status }}</span>
+                  <span class="rx-chip" :class="rx.status === 'dispensed' ? 'active' : 'expired'">{{ rx.status }}</span>
                 </div>
                 <div class="rx-details">
-                  <div class="rx-row" v-for="(val, key) in rx.details" :key="key">
-                    <span class="rx-key">{{ key }}</span><span>{{ val }}</span>
+                  <div class="rx-row" v-for="item in rx.items" :key="item.drug_name">
+                    <span class="rx-key">{{ item.drug_name }}</span>
+                    <span>{{ item.dosage }} · {{ item.frequency }} · {{ item.duration }}</span>
                   </div>
+                  <p v-if="!rx.items?.length" class="text-light" style="font-size:0.8rem">No items listed.</p>
+                  <p v-if="rx.notes" class="text-light" style="font-size:0.8rem;margin-top:4px">{{ rx.notes }}</p>
                 </div>
                 <div class="rx-footer">
-                  <RouterLink v-if="rx.status === 'active'" to="/shop" class="btn btn-primary btn-sm">Refill via Shop</RouterLink>
-                  <button class="btn btn-secondary btn-sm">Download PDF</button>
+                  <RouterLink v-if="rx.status === 'pending'" to="/shop" class="btn btn-primary btn-sm">Shop Related Products</RouterLink>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- ── MESSAGES ── -->
-          <div v-if="activeSection === 'messages'" class="pane">
-            <div class="messages-layout">
-              <div class="msg-list">
-                <div :class="['msg-thread', { unread: m.unread, active: activeMsg === m.id }]" v-for="m in messages" :key="m.id" @click="activeMsg = m.id">
-                  <div class="msg-avatar" :style="{ background: m.avatarBg }">
-                    <img :src="m.avatar" :alt="m.from" />
-                  </div>
-                  <div class="msg-preview">
-                    <div class="msg-from-row">
-                      <strong>{{ m.from }}</strong>
-                      <span class="msg-time">{{ m.time }}</span>
-                    </div>
-                    <p class="msg-snippet">{{ m.snippet }}</p>
-                  </div>
-                  <div v-if="m.unread" class="msg-unread-dot"></div>
-                </div>
-              </div>
-              <div class="msg-body" v-if="activeMsg">
-                <div class="msg-full" v-for="m in messages.filter(x => x.id === activeMsg)" :key="m.id">
-                  <div class="msg-full-head">
-                    <img :src="m.avatar" :alt="m.from" class="msg-full-avatar" />
-                    <div>
-                      <strong>{{ m.from }}</strong>
-                      <small>{{ m.role }}</small>
-                    </div>
-                    <span class="msg-time" style="margin-left:auto">{{ m.time }}</span>
-                  </div>
-                  <p class="msg-full-body">{{ m.body }}</p>
-                  <div class="msg-reply-box">
-                    <textarea class="form-control" rows="3" placeholder="Type your reply…"></textarea>
-                    <button class="btn btn-primary btn-sm" style="margin-top:10px">Send Reply</button>
-                  </div>
-                </div>
-                <div v-if="!activeMsg" class="msg-empty">Select a message to read</div>
-              </div>
-              <div class="msg-body msg-empty-state" v-else>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <p>Select a conversation</p>
-              </div>
+          <!-- ── NOTIFICATIONS ── -->
+          <div v-if="activeSection === 'notifications'" class="pane">
+            <div v-if="notificationsLoading" class="empty-hint">Loading notifications…</div>
+            <div v-else-if="!notifications.length" class="empty-state-block">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" style="margin-bottom:12px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <p>You're all caught up — nothing needs your attention right now.</p>
             </div>
-          </div>
-
-          <!-- ── ORDERS ── -->
-          <div v-if="activeSection === 'orders'" class="pane">
-            <div class="orders-list">
-              <div class="order-card" v-for="o in orders" :key="o.id">
-                <div class="order-head">
-                  <div><strong class="order-id">#{{ o.id }}</strong><span class="order-date"> · {{ o.date }}</span></div>
-                  <span :class="['status-chip', o.status]">{{ o.status }}</span>
+            <div v-else class="notif-feed">
+              <div class="notif-card" v-for="n in notifications" :key="n.id">
+                <div class="notif-icon" :class="urgencyClass(n.urgency)">
+                  <svg v-if="n.type === 'appointment'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg v-else-if="n.type === 'invoice'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <svg v-else-if="n.type === 'prescription'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+                  <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
-                <div class="order-items">
-                  <div class="order-item" v-for="item in o.items" :key="item.name">
-                    <img :src="item.image" :alt="item.name" class="order-img" />
-                    <div class="order-item-info"><strong>{{ item.name }}</strong><small>Qty: {{ item.qty }}</small></div>
-                    <span class="order-price">KES {{ item.price.toLocaleString() }}</span>
-                  </div>
-                </div>
-                <div class="order-foot">
-                  <strong>Total: KES {{ o.total.toLocaleString() }}</strong>
-                  <RouterLink to="/shop" class="btn btn-secondary btn-sm">Reorder</RouterLink>
+                <div class="notif-content">
+                  <strong>{{ n.title }}</strong>
+                  <p>{{ n.body }}</p>
+                  <small>{{ formatDate(n.date) }}</small>
                 </div>
               </div>
             </div>
@@ -492,21 +529,26 @@
           <div v-if="activeSection === 'billing'" class="pane">
             <div class="billing-cards">
               <div class="billing-summary">
-                <div class="bs-row" v-for="b in billingSummary" :key="b.label">
-                  <span>{{ b.label }}</span><strong :style="b.style ? { color: b.style } : {}">{{ b.value }}</strong>
-                </div>
+                <div class="bs-row"><span>Total Invoiced</span><strong>{{ fmtMoney(billingTotals.invoiced) }}</strong></div>
+                <div class="bs-row"><span>Total Paid</span><strong style="color:#16A34A">{{ fmtMoney(billingTotals.paid) }}</strong></div>
+                <div class="bs-row"><span>Outstanding Balance</span><strong :style="{ color: billingTotals.balance > 0 ? 'var(--red)' : '#16A34A' }">{{ fmtMoney(billingTotals.balance) }}</strong></div>
               </div>
-              <div class="table-card" style="margin-top:24px">
+              <div v-if="invoicesLoading" class="empty-hint" style="margin-top:24px">Loading invoices…</div>
+              <div v-else class="table-card" style="margin-top:24px">
                 <table class="data-table">
-                  <thead><tr><th>Invoice</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Invoice</th><th>Date</th><th>Total</th><th>Balance</th><th>Status</th><th></th></tr></thead>
                   <tbody>
                     <tr v-for="inv in invoices" :key="inv.id">
-                      <td><span style="font-size:0.82rem;color:var(--teal);font-weight:600">{{ inv.id }}</span></td>
-                      <td style="font-size:0.82rem">{{ inv.date }}</td>
-                      <td style="font-size:0.82rem">{{ inv.desc }}</td>
-                      <td style="font-weight:600">KES {{ inv.amount.toLocaleString() }}</td>
-                      <td><span :class="['status-chip', inv.status]">{{ inv.status }}</span></td>
+                      <td><span style="font-size:0.82rem;color:var(--teal);font-weight:600">{{ inv.invoice_no }}</span></td>
+                      <td style="font-size:0.82rem">{{ formatDate(inv.invoice_date) }}</td>
+                      <td style="font-weight:600">{{ fmtMoney(inv.total_amount) }}</td>
+                      <td style="font-size:0.82rem">{{ inv.balance > 0 ? fmtMoney(inv.balance) : '—' }}</td>
+                      <td><span class="status-chip" :style="{ background: inv.status_color + '22', color: inv.status_color }">{{ inv.status_label }}</span></td>
+                      <td>
+                        <button class="link-btn" @click="downloadInvoice(inv)">Download PDF</button>
+                      </td>
                     </tr>
+                    <tr v-if="!invoices.length"><td colspan="6" class="empty-hint">No invoices yet.</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -520,23 +562,36 @@
                 <h3>Profile</h3>
                 <div class="profile-avatar-row">
                   <div class="profile-avatar">{{ userInitial }}</div>
-                  <div><strong>{{ userName }}</strong><p>{{ creds.email }}</p></div>
+                  <div><strong>{{ client.full_name }}</strong><p>{{ client.email || client.phone }}</p></div>
                 </div>
-                <div class="form-2col">
-                  <div class="form-group"><label class="form-label">First Name</label><input class="form-control" :value="userName.split(' ')[0]" /></div>
-                  <div class="form-group"><label class="form-label">Last Name</label><input class="form-control" :value="userName.split(' ')[1] || ''" /></div>
+                <div class="form-group"><label class="form-label">Client No.</label><input class="form-control" :value="client.client_no" disabled /></div>
+                <div class="form-group" style="margin-top:12px"><label class="form-label">Email</label><input class="form-control" :value="client.email" type="email" disabled /></div>
+                <div class="form-group" style="margin-top:12px"><label class="form-label">Phone</label><input class="form-control" :value="client.phone" type="tel" disabled /></div>
+                <div class="form-group" style="margin-top:12px">
+                  <label class="form-label">Address</label>
+                  <textarea class="form-control" rows="2" v-model="profileForm.address"></textarea>
                 </div>
-                <div class="form-group" style="margin-top:12px"><label class="form-label">Email</label><input class="form-control" :value="creds.email" type="email" /></div>
-                <div class="form-group" style="margin-top:12px"><label class="form-label">Phone</label><input class="form-control" value="+254 712 345 678" type="tel" /></div>
-                <button class="btn btn-primary btn-sm" style="margin-top:16px">Save Changes</button>
+                <p class="field-hint">To change your name, phone, or email, please contact the clinic directly.</p>
+                <button class="btn btn-primary btn-sm" style="margin-top:12px" :disabled="savingProfile" @click="saveProfile">
+                  {{ savingProfile ? 'Saving…' : 'Save Changes' }}
+                </button>
+                <span v-if="profileSaved" class="save-confirm">Saved ✓</span>
               </div>
 
               <div class="settings-panel">
-                <h3>Notifications</h3>
+                <h3>Notification Preferences</h3>
                 <div class="notif-list">
-                  <div class="notif-item" v-for="n in notifPrefs" :key="n.label">
-                    <div><strong>{{ n.label }}</strong><p>{{ n.desc }}</p></div>
-                    <label class="toggle"><input type="checkbox" :checked="n.on" /><span class="toggle-track"></span></label>
+                  <div class="notif-item">
+                    <div><strong>SMS</strong><p>Appointment &amp; billing alerts via text</p></div>
+                    <label class="toggle"><input type="checkbox" v-model="profileForm.consent_sms" @change="saveProfile" /><span class="toggle-track"></span></label>
+                  </div>
+                  <div class="notif-item">
+                    <div><strong>Email</strong><p>Receipts, records, and reminders</p></div>
+                    <label class="toggle"><input type="checkbox" v-model="profileForm.consent_email" @change="saveProfile" /><span class="toggle-track"></span></label>
+                  </div>
+                  <div class="notif-item">
+                    <div><strong>WhatsApp</strong><p>Quick updates where you already chat</p></div>
+                    <label class="toggle"><input type="checkbox" v-model="profileForm.consent_whatsapp" @change="saveProfile" /><span class="toggle-track"></span></label>
                   </div>
                 </div>
               </div>
@@ -544,9 +599,12 @@
               <div class="settings-panel">
                 <h3>Security</h3>
                 <div class="security-list">
-                  <div class="security-item" v-for="s in securityItems" :key="s.label">
-                    <div><strong>{{ s.label }}</strong><p>{{ s.desc }}</p></div>
-                    <button class="btn btn-secondary btn-sm">{{ s.action }}</button>
+                  <div class="security-item">
+                    <div><strong>Sign-in method</strong><p>One-time codes sent to your phone or email — no password to manage.</p></div>
+                  </div>
+                  <div class="security-item">
+                    <div><strong>This session</strong><p>Signing in elsewhere automatically signs you out here.</p></div>
+                    <button class="btn btn-secondary btn-sm" @click="handleLogout">Sign Out</button>
                   </div>
                 </div>
               </div>
@@ -561,28 +619,196 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
+import { usePortalAuth }         from '../composables/usePortalAuth.js'
+import {
+  usePortalPets, usePortalAppointments, usePortalMedicalRecords,
+  usePortalPrescriptions, usePortalInvoices, usePortalNotifications,
+} from '../composables/usePortalData.js'
+import { portalApi } from '../lib/portalApi.js'
+import { useToast }  from '../composables/useToast.js'
 
-/* ── Auth ── */
-const creds      = ref({ email: '', password: '' })
-const loggedIn   = ref(false)
-const showPw     = ref(false)
-const remember   = ref(false)
-const loginError = ref('')
+const {
+  client, loading: authLoading, isLoggedIn,
+  requestOtp, verifyOtp, login: clientLogin, setPassword,
+  logout, updateProfile,
+} = usePortalAuth()
+const { success, error: toastError } = useToast()
 
-function login() {
-  if (creds.value.password !== 'demo1234') { loginError.value = 'Incorrect password. Hint: demo1234'; return }
-  loginError.value = ''
-  loggedIn.value   = true
+/* ── Auth (password-first, OTP for setup/recovery) ── */
+const authStage              = ref('identifier')
+const identifier             = ref('')
+const password                = ref('')
+const passwordConfirmation    = ref('')
+const code                     = ref('')
+const submitting                = ref(false)
+const authError                 = ref('')
+const maskedDestination         = ref('')
+const hasPassword               = ref(false)
+
+function handleIdentify() {
+  authStage.value = 'password'
+  authError.value = ''
 }
 
-const userName    = computed(() => creds.value.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Martin')
-const userInitial = computed(() => userName.value[0]?.toUpperCase() || 'M')
+async function handleClientLogin() {
+  submitting.value = true
+  authError.value = ''
+  try {
+    await clientLogin(identifier.value, password.value)
+  } catch (e) {
+    if (e.data?.needs_setup) {
+      password.value = ''
+      await handleRequestOtp()
+      return
+    }
+    authError.value = e.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleRequestOtp() {
+  submitting.value = true
+  authError.value = ''
+  try {
+    const res = await requestOtp(identifier.value)
+    maskedDestination.value = res.masked_destination || 'your registered contact'
+    authStage.value = 'otp'
+  } catch (e) {
+    authError.value = e.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleVerifyOtp() {
+  submitting.value = true
+  authError.value = ''
+  try {
+    const { hasPassword: existing } = await verifyOtp(identifier.value, code.value)
+    hasPassword.value = existing
+    code.value = ''
+    authStage.value = 'set-password'
+  } catch (e) {
+    authError.value = e.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleSetPassword() {
+  submitting.value = true
+  authError.value = ''
+  if (password.value !== passwordConfirmation.value) {
+    authError.value = 'Passwords do not match.'
+    submitting.value = false
+    return
+  }
+  try {
+    await setPassword(password.value, passwordConfirmation.value)
+    authStage.value = 'identifier'
+    identifier.value = ''
+    password.value = ''
+    passwordConfirmation.value = ''
+  } catch (e) {
+    authError.value = e.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+function backToIdentifier() {
+  authStage.value = 'identifier'
+  password.value = ''
+  code.value = ''
+  authError.value = ''
+}
+
+async function handleLogout() {
+  await logout()
+  activeSection.value = 'overview'
+}
+
+const userInitial = computed(() => client.value?.full_name?.[0]?.toUpperCase() || '?')
+const firstName    = computed(() => client.value?.first_name || client.value?.full_name?.split(' ')[0] || 'there')
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+})
+
+/* ── Data (fetched once logged in) ── */
+const { items: pets,             loading: petsLoading }           = usePortalPets()
+const { items: appointments,     loading: apptsLoading }          = usePortalAppointments()
+const { items: medicalRecords,   loading: recordsLoading }        = usePortalMedicalRecords()
+const { items: prescriptions,    loading: prescriptionsLoading }  = usePortalPrescriptions()
+const { items: invoices,         loading: invoicesLoading }       = usePortalInvoices()
+const { items: notifications,    loading: notificationsLoading }  = usePortalNotifications()
+
+const topNotification = computed(() => notifications.value[0] || null)
+
+const today = new Date().toISOString().split('T')[0]
+const upcomingAppts = computed(() =>
+  appointments.value
+    .filter(a => a.appointment_date >= today && !['CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(a.status))
+    .sort((a, b) => a.appointment_date.localeCompare(b.appointment_date))
+)
+const pastAppts = computed(() =>
+  appointments.value
+    .filter(a => !upcomingAppts.value.includes(a))
+    .sort((a, b) => b.appointment_date.localeCompare(a.appointment_date))
+)
+
+const billingTotals = computed(() => {
+  const invoiced = invoices.value.reduce((s, i) => s + i.total_amount, 0)
+  const paid     = invoices.value.reduce((s, i) => s + i.paid_amount, 0)
+  const balance  = invoices.value.reduce((s, i) => s + i.balance, 0)
+  return { invoiced, paid, balance }
+})
+
+/* ── Profile form ── */
+const profileForm  = reactive({ address: '', consent_sms: true, consent_email: true, consent_whatsapp: true })
+const savingProfile = ref(false)
+const profileSaved  = ref(false)
+
+watch(client, (c) => {
+  if (!c) return
+  profileForm.address          = c.address || ''
+  profileForm.consent_sms      = c.consent_sms
+  profileForm.consent_email    = c.consent_email
+  profileForm.consent_whatsapp = c.consent_whatsapp
+}, { immediate: true })
+
+async function saveProfile() {
+  savingProfile.value = true
+  profileSaved.value = false
+  try {
+    await updateProfile({ ...profileForm })
+    profileSaved.value = true
+    setTimeout(() => (profileSaved.value = false), 2000)
+  } catch (e) {
+    toastError(e.message)
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+async function downloadInvoice(invoice) {
+  try {
+    await portalApi.download(`/portal/invoices/${invoice.id}/pdf`, `${invoice.invoice_no}.pdf`)
+  } catch (e) {
+    toastError('Could not download that invoice right now.')
+  }
+}
 
 /* ── Nav ── */
-const activeSection = ref('overview')
+const activeSection  = ref('overview')
+const mobileNavOpen  = ref(false)
+watch(activeSection, () => { mobileNavOpen.value = false })
 const currentLabel  = computed(() => {
-  const all = [...mainNav, ...healthNav, ...accountNav]
+  const all = [...mainNav, ...healthNav.value, ...accountNav.value]
   return all.find(n => n.id === activeSection.value)?.label ?? 'Overview'
 })
 
@@ -591,151 +817,79 @@ const mainNav = [
   { id: 'pets',         label: 'My Pets',       icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' },
   { id: 'appointments', label: 'Appointments',  icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z' },
 ]
-const healthNav = [
+const healthNav = computed(() => [
   { id: 'records',       label: 'Health Records',  icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M12 18v-6 M9 15h6' },
-  { id: 'prescriptions', label: 'Prescriptions',   icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z M12 8v8 M8 12h8', badge: 2 },
-]
-const accountNav = [
-  { id: 'messages', label: 'Messages',         icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', badge: 2 },
-  { id: 'orders',   label: 'My Orders',        icon: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0' },
-  { id: 'billing',  label: 'Billing & Invoices', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8' },
-  { id: 'settings', label: 'Settings',         icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
-]
+  { id: 'prescriptions', label: 'Prescriptions',   icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z M12 8v8 M8 12h8', badge: prescriptions.value.filter(p => p.status === 'pending').length || null },
+])
+const accountNav = computed(() => [
+  { id: 'notifications', label: 'Notifications',      icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0', badge: notifications.value.length || null },
+  { id: 'billing',       label: 'Billing & Invoices',  icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8' },
+  { id: 'settings',      label: 'Settings',            icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
+])
 
 /* ── Quick actions ── */
 const quickActions = [
-  { label: 'Book Appointment',    section: 'appointments',  icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z', bg: '#E3F9F8', color: '#0BBFB2' },
-  { label: 'Refill Prescription', section: 'prescriptions', icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z M12 8v8 M8 12h8', bg: '#DBEAFE', color: '#3B82F6' },
-  { label: 'Message Vet',         section: 'messages',      icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', bg: '#F3E8FF', color: '#8B5CF6' },
-  { label: 'Order Supplies',      section: 'orders',        icon: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18', bg: '#FFF8E1', color: '#F59E0B' },
-  { label: 'Download Records',    section: 'records',       icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3', bg: '#DCFCE7', color: '#16A34A' },
+  { label: 'Book Appointment', section: 'appointments',   icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z', bg: '#E3F9F8', color: '#0BBFB2' },
+  { label: 'Prescriptions',    section: 'prescriptions',  icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z M12 8v8 M8 12h8', bg: '#DBEAFE', color: '#3B82F6' },
+  { label: 'Notifications',    section: 'notifications',  icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', bg: '#F3E8FF', color: '#8B5CF6' },
+  { label: 'Health Records',   section: 'records',        icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3', bg: '#DCFCE7', color: '#16A34A' },
 ]
 
 /* ── KPI cards ── */
-const kpiCards = [
-  { label: 'ACTIVE PETS',          value: '2', sub: 'Max & Luna',         section: 'pets',          icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', bg: '#F0FDFC', color: '#0BBFB2' },
-  { label: 'UPCOMING APPOINTMENTS', value: '2', sub: 'Next: Jun 2',        section: 'appointments',  icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z', bg: '#EFF6FF', color: '#3B82F6' },
-  { label: 'RECENT ORDERS',         value: '3', sub: '1 in transit',       section: 'orders',        icon: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18', bg: '#FFF8E1', color: '#F59E0B' },
-  { label: 'UNREAD MESSAGES',       value: '2', sub: 'From Dr. Akinyi',    section: 'messages',      icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', bg: '#F5F3FF', color: '#8B5CF6' },
-]
+const kpiCards = computed(() => [
+  { label: 'ACTIVE PETS',           value: pets.value.filter(p => !p.is_deceased).length, sub: pets.value.map(p => p.name).slice(0, 2).join(' & ') || '—', section: 'pets', icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', bg: '#F0FDFC', color: '#0BBFB2' },
+  { label: 'UPCOMING APPOINTMENTS', value: upcomingAppts.value.length, sub: upcomingAppts.value[0] ? `Next: ${formatDate(upcomingAppts.value[0].appointment_date)}` : 'None scheduled', section: 'appointments', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z', bg: '#EFF6FF', color: '#3B82F6' },
+  { label: 'OUTSTANDING BALANCE',   value: fmtMoney(billingTotals.value.balance), sub: billingTotals.value.balance > 0 ? 'Payment due' : 'All settled', section: 'billing', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6', bg: '#FFF8E1', color: '#F59E0B' },
+  { label: 'NOTIFICATIONS',         value: notifications.value.length, sub: notifications.value.some(n => n.urgency === 'high') ? 'Needs attention' : 'Up to date', section: 'notifications', icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', bg: '#F5F3FF', color: '#8B5CF6' },
+])
 
-/* ── Pets ── */
-const pets = [
-  {
-    name: 'Max', species: 'Dog', breed: 'Golden Retriever', age: '4 yrs', sex: 'Male',
-    vaccStatus: 'vaccinated',
-    headerGradient: 'linear-gradient(135deg, #0BBFB2 0%, #0D2B4B 100%)',
-    avatarBg: '#E3F9F8',
-    image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=300&h=300&q=80',
-    attrs: { Age: '4 years', Weight: '32 kg', Microchip: 'KE-2020-08321', Blood: 'DEA 1.1+', Neutered: 'Yes', Colour: 'Golden' },
-    vaccinations: [
-      { name: 'Rabies',     status: 'up-to-date', date: 'Jan 2026' },
-      { name: 'DHPP',       status: 'up-to-date', date: 'Jan 2026' },
-      { name: 'Bordetella', status: 'due-soon',   date: 'Aug 2026' },
-    ],
-    notes: 'No known allergies. Active dog, requires daily exercise. Prefers dry food.',
-  },
-  {
-    name: 'Luna', species: 'Cat', breed: 'Domestic Shorthair', age: '3 yrs', sex: 'Female',
-    vaccStatus: 'due',
-    headerGradient: 'linear-gradient(135deg, #8B5CF6 0%, #0D2B4B 100%)',
-    avatarBg: '#F5F3FF',
-    image: 'https://images.unsplash.com/photo-1615789591457-74a63395c990?auto=format&fit=crop&w=300&h=300&q=80',
-    attrs: { Age: '3 years', Weight: '3.8 kg', Microchip: 'KE-2021-14567', Blood: 'Type A', Neutered: 'Yes', Colour: 'Tabby' },
-    vaccinations: [
-      { name: 'Rabies', status: 'up-to-date', date: 'Mar 2026' },
-      { name: 'FVRCP',  status: 'overdue',    date: 'Jun 2026' },
-      { name: 'FeLV',   status: 'up-to-date', date: 'Mar 2026' },
-    ],
-    notes: 'Mild sensitivity to chicken-based food. On restricted diet per Dr. Zipporah.',
-  },
-]
-
-/* ── Reminders ── */
-const reminders = [
-  { title: 'Dental clean due — Max',    detail: 'Overdue by 2 weeks',  urgency: 'danger' },
-  { title: 'FVRCP booster — Luna',      detail: 'Overdue since Jun',   urgency: 'danger' },
-  { title: 'Bordetella — Max',          detail: 'Due Aug 2026',        urgency: 'warn' },
-  { title: 'Annual wellness — Max',     detail: 'Due Sep 2026',        urgency: 'ok' },
-]
-
-/* ── Appointments ── */
+/* ── Appointments tab ── */
 const apptTab = ref('upcoming')
-const upcomingAppts = [
-  { id:1, service:'Annual Wellness Check', date:'Jun 2, 2026',  month:'JUN', day:'02', time:'10:00 AM', vet:'Chesang',  pet:'Max',  status:'confirmed', notes:'Bring prior blood results' },
-  { id:2, service:'FVRCP Vaccination',     date:'Jun 12, 2026', month:'JUN', day:'12', time:'2:30 PM',  vet:'Zipporah', pet:'Luna', status:'pending',   notes:'' },
-]
-const pastAppts = [
-  { id:3, service:'Dental Cleaning',       date:'Apr 3, 2026',  month:'APR', day:'03', time:'11:00 AM', vet:'Sharon',   pet:'Max',  status:'completed', notes:'Minor tartar removed' },
-  { id:4, service:'Emergency Consult',     date:'Jan 22, 2026', month:'JAN', day:'22', time:'8:00 PM',  vet:'Chesang',  pet:'Luna', status:'completed', notes:'Vomiting — resolved' },
-  { id:5, service:'Wellness Exam',         date:'Sep 1, 2025',  month:'SEP', day:'01', time:'9:00 AM',  vet:'Kagucia',  pet:'Max',  status:'completed', notes:'All clear' },
-]
 
-/* ── Medical Records ── */
-const medRecords = [
-  { id:1, date:'Jun 2, 2026',  title:'Annual Wellness Exam',  type:'wellness',  pet:'Max',  vet:'Chesang',  notes:'Scheduled. All baseline metrics normal.', findings:['Weight stable','Heart rate normal'] },
-  { id:2, date:'Apr 3, 2026',  title:'Dental Cleaning',       type:'procedure', pet:'Max',  vet:'Sharon',   notes:'Stage 1 dental disease. Minor tartar removed.', findings:['Stage 1 periodontal'] },
-  { id:3, date:'Jan 22, 2026', title:'Emergency — Vomiting',  type:'emergency', pet:'Luna', vet:'Chesang',  notes:'Acute vomiting. IV fluids. Chicken allergy confirmed.', findings:['Dehydration (mild)','Chicken intolerance'] },
-  { id:4, date:'Sep 1, 2025',  title:'Wellness Exam',         type:'wellness',  pet:'Max',  vet:'Kagucia',  notes:'Full bloodwork normal. Hip score 8/10.', findings:['Bloodwork normal','Hip 8/10'] },
-]
-
-/* ── Prescriptions ── */
-const prescriptions = [
-  { id:1, medication:'Apoquel (Oclacitinib)', pet:'Max',  status:'active',  details:{ Dosage:'16 mg', Frequency:'Once daily', Prescribed:'Dr. Chesang', Start:'Apr 3, 2026', Expiry:'Oct 3, 2026', Refills:'2 remaining', Instructions:'Give with food' } },
-  { id:2, medication:'RC Hypoallergenic Diet', pet:'Luna', status:'active',  details:{ Dosage:'180 g/day', Frequency:'Split 2 meals', Prescribed:'Dr. Zipporah', Start:'Jan 25, 2026', Expiry:'Ongoing', Refills:'N/A', Instructions:'No chicken-based treats' } },
-  { id:3, medication:'Metacam (Meloxicam)',    pet:'Max',  status:'expired', details:{ Dosage:'2.5 mg', Frequency:'Once daily × 5 days', Prescribed:'Dr. Sharon', Start:'Apr 3, 2026', Expiry:'Apr 8, 2026', Refills:'None', Instructions:'Post-dental pain. Completed.' } },
-]
-
-/* ── Messages ── */
-const activeMsg = ref(null)
-const messages = [
-  { id:1, from:'Dr. Akinyi Odhiambo', role:'Veterinarian', avatar:'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80', avatarBg:'#E3F9F8', time:'Today 9:14 AM', snippet:"Luna's FVRCP booster is overdue — please book soon.", body:"Hi, just a reminder that Luna's FVRCP booster was due in June and is now overdue. This is important for her protection against respiratory viruses. Please call us or use the portal to book as soon as possible. Dr. Akinyi", unread:true },
-  { id:2, from:'Poseidon Vet Clinic',  role:'System',       avatar:'https://images.unsplash.com/photo-1629001819038-87afe9fd3c9f?auto=format&fit=crop&w=80&h=80&q=80', avatarBg:'#EFF6FF', time:'Yesterday',      snippet:"Your appointment on Jun 2 has been confirmed.", body:"Your appointment for Max's Annual Wellness Check has been confirmed for June 2, 2026 at 10:00 AM with Dr. Chesang. Please arrive 5 minutes early. If you need to reschedule, contact us at least 24 hours in advance.", unread:true },
-  { id:3, from:'Dr. Chesang',          role:'Chief Vet',    avatar:'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=80&h=80&q=80', avatarBg:'#FFF8E1', time:'Jun 10',           snippet:"Max's bloodwork results are ready.", body:"Good news — Max's bloodwork from his last visit came back completely normal. All values are within healthy ranges. I've added the detailed results to his health record in the portal. Keep up the good work with his diet!", unread:false },
-]
-
-/* ── Orders ── */
-const orders = [
-  { id:'PV-2026-0114', date:'Jun 20, 2026', status:'delivered', total:4750, items:[
-    { name:'Apoquel 16mg × 30 tabs', qty:1, price:3500, image:'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=80&h=80&q=80' },
-    { name:"Hill's Science Diet Adult", qty:1, price:1250, image:'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?auto=format&fit=crop&w=80&h=80&q=80' },
-  ]},
-  { id:'PV-2026-0088', date:'Mar 5, 2026',  status:'delivered', total:6800, items:[
-    { name:'RC Hypoallergenic 4kg ×2', qty:2, price:5600, image:'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?auto=format&fit=crop&w=80&h=80&q=80' },
-    { name:'Cat Calming Collar',        qty:1, price:1200, image:'https://images.unsplash.com/photo-1615789591457-74a63395c990?auto=format&fit=crop&w=80&h=80&q=80' },
-  ]},
-]
-
-/* ── Billing ── */
-const billingSummary = [
-  { label:'Total Paid (2026)',  value:'KES 18,450' },
-  { label:'Outstanding Balance', value:'KES 0',      style:'#16A34A' },
-  { label:'Next Invoice',        value:'After Jun 2 visit' },
-]
-const invoices = [
-  { id:'INV-026-041', date:'Jun 20, 2026', desc:'Apoquel + Hill\'s Diet',   amount:4750, status:'paid' },
-  { id:'INV-026-023', date:'Apr 3, 2026',  desc:'Dental Cleaning — Max',    amount:8200, status:'paid' },
-  { id:'INV-026-009', date:'Jan 22, 2026', desc:'Emergency Consult — Luna', amount:5500, status:'paid' },
-]
-
-/* ── Settings ── */
-const notifPrefs = [
-  { label:'Appointment Reminders', desc:'24 hrs before your visit',       on:true  },
-  { label:'Vaccination Alerts',    desc:'When a vaccine is due/overdue',  on:true  },
-  { label:'Prescription Refills',  desc:'When running low',               on:true  },
-  { label:'Promotions & Offers',   desc:'Deals from Poseidon Pet Shop',   on:false },
-]
-const securityItems = [
-  { label:'Change Password',           desc:'Last changed 3 months ago',  action:'Update' },
-  { label:'Two-Factor Authentication', desc:'Add an extra layer of security', action:'Enable' },
-  { label:'Active Sessions',           desc:'1 active session',           action:'Manage' },
-]
+/* ── Formatting helpers ── */
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+function formatMonth(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+}
+function formatDay(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr + 'T00:00:00').getDate().toString().padStart(2, '0')
+}
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':')
+  const hour = parseInt(h, 10)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const hour12 = hour % 12 || 12
+  return `${hour12}:${m} ${period}`
+}
+function fmtMoney(n) {
+  return 'KES ' + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+function sexLabel(sex) {
+  return { MALE: 'Male', FEMALE: 'Female', UNKNOWN: 'Unknown' }[sex] || sex || '—'
+}
+function statusClass(status) {
+  const map = {
+    CONFIRMED: 'confirmed', CHECKED_IN: 'confirmed', WAITING: 'pending',
+    IN_CONSULTATION: 'pending', COMPLETED: 'completed', NO_SHOW: 'cancelled',
+    CANCELLED: 'cancelled', RESCHEDULED: 'pending', DRAFT: 'pending',
+  }
+  return map[status] || 'completed'
+}
+function urgencyClass(urgency) {
+  return { high: 'danger', normal: 'warn', low: 'ok' }[urgency] || 'ok'
+}
 
 /* ── Login page stats ── */
 const loginStats = [
-  { num:'4,200+', label:'Pets treated' },
-  { num:'15 yrs', label:'Experience'   },
-  { num:'98%',    label:'Satisfaction' },
+  { num: '4,200+', label: 'Pets treated' },
+  { num: '15 yrs',  label: 'Experience'   },
+  { num: '98%',     label: 'Satisfaction' },
 ]
 </script>
 
@@ -767,24 +921,18 @@ const loginStats = [
 .input-icon-wrap { position: relative; }
 .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
 .form-control.icon-left { padding-left: 38px; }
-.pw-wrap .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); transition: color var(--transition); }
-.pw-wrap .pw-toggle:hover { color: var(--teal); }
+.otp-input { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.4em; text-align: center; }
 
-.login-meta { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
-.remember-label { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text-light); cursor: pointer; }
-.forgot-link { font-size: 0.8rem; color: var(--teal); }
 .login-error { background: #FEE2E2; color: var(--red); font-size: 0.82rem; padding: 10px 14px; border-radius: var(--radius-sm); border-left: 3px solid var(--red); margin-top: 10px; }
 .login-btn { width: 100%; justify-content: center; padding: 14px; margin-top: 18px; }
 .login-divider { text-align: center; color: var(--gray-300); font-size: 0.75rem; margin: 18px 0; position: relative; }
 .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:44%; height:1px; background:var(--border); }
 .login-divider::before { left:0; } .login-divider::after { right:0; }
-.demo-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--teal-xlight); border: 1px solid var(--teal-light);
-  border-radius: var(--radius-sm); padding: 10px 14px;
-  font-size: 0.76rem; color: var(--text-light); margin-top: 18px;
-}
-.demo-pill code { background: var(--teal-light); color: var(--teal-dark); padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+.otp-actions { display: flex; justify-content: space-between; margin-top: 16px; flex-wrap: wrap; gap: 8px; }
+.link-btn { font-size: 0.8rem; color: var(--teal); font-weight: 600; }
+.link-btn:hover { text-decoration: underline; }
+.link-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .login-right { position: relative; overflow: hidden; }
 .login-bg    { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
@@ -871,7 +1019,16 @@ const loginStats = [
   position: sticky; top: 0; z-index: 20;
   box-shadow: 0 1px 0 var(--border);
 }
-.topbar-left { display: flex; flex-direction: column; }
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar-title-group { display: flex; flex-direction: column; min-width: 0; }
+.dash-hamburger {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  color: var(--navy); flex-shrink: 0;
+}
+.dash-hamburger:hover { background: var(--gray-100); }
+.topbar-eyebrow, .topbar-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-eyebrow { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; color: var(--text-light); text-transform: uppercase; }
 .topbar-title   { font-size: 0.92rem; font-weight: 700; color: var(--navy); line-height: 1; }
 .topbar-right   { display: flex; align-items: center; gap: 8px; }
@@ -909,6 +1066,8 @@ const loginStats = [
 /* ── Body ── */
 .dash-body { flex: 1; padding: 24px 28px; }
 .pane { animation: page-in 220ms var(--ease-out) both; }
+.empty-hint { text-align: center; color: var(--text-light); font-size: 0.85rem; padding: 20px 0; }
+.empty-state-block { text-align: center; color: var(--text-light); font-size: 0.9rem; padding: 60px 20px; }
 
 /* ── Welcome banner ── */
 .welcome-banner {
@@ -968,7 +1127,7 @@ const loginStats = [
   width: 44px; height: 44px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.kpi-num   { font-size: 1.8rem; font-weight: 800; color: var(--teal); line-height: 1; }
+.kpi-num   { font-size: 1.5rem; font-weight: 800; color: var(--teal); line-height: 1; }
 .kpi-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin: 4px 0 4px; }
 .kpi-sub   { font-size: 0.72rem; font-weight: 500; }
 
@@ -993,7 +1152,12 @@ const loginStats = [
 }
 .pet-row:hover { background: var(--teal-xlight); }
 .pet-avatar-wrap { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border); flex-shrink: 0; }
-.pet-avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.pet-avatar-fallback {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--teal-light); color: var(--teal-dark);
+  font-weight: 800; font-size: 1rem;
+}
+.pp-avatar-lg { width: 80px; height: 80px; font-size: 1.8rem; border: 3px solid white; box-shadow: var(--shadow-md); }
 .pet-info strong { display: block; font-size: 0.84rem; color: var(--navy); }
 .pet-info small  { font-size: 0.72rem; color: var(--text-light); }
 .pet-vacc-badge  {
@@ -1001,8 +1165,7 @@ const loginStats = [
   padding: 3px 9px; border-radius: 100px;
   display: flex; align-items: center; gap: 4px;
 }
-.pet-vacc-badge.vaccinated { background: #DCFCE7; color: #16A34A; }
-.pet-vacc-badge.due        { background: #FEE2E2; color: var(--red); }
+.pet-vacc-badge.due { background: #FEE2E2; color: var(--red); }
 
 /* Reminders */
 .reminder-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1013,13 +1176,6 @@ const loginStats = [
 .reminder-dot.ok     { background: var(--teal); }
 .reminder-info strong { display: block; font-size: 0.82rem; color: var(--navy); }
 .reminder-info small  { font-size: 0.72rem; color: var(--text-light); }
-.reminder-book {
-  margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--teal);
-  border: 1px solid var(--teal-light); background: var(--teal-xlight);
-  padding: 4px 12px; border-radius: 100px; white-space: nowrap;
-  transition: background var(--transition), border-color var(--transition);
-}
-.reminder-book:hover { background: var(--teal-light); }
 
 /* Appointment list */
 .appt-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1035,7 +1191,6 @@ const loginStats = [
 .status-chip.confirmed { background: #DCFCE7; color: #166534; }
 .status-chip.pending   { background: #FEF9C3; color: #854D0E; }
 .status-chip.completed { background: var(--gray-100); color: var(--gray-600); }
-.status-chip.delivered { background: #DCFCE7; color: #166534; }
 .status-chip.paid      { background: #DCFCE7; color: #166534; }
 .status-chip.cancelled { background: #FEE2E2; color: var(--red); }
 
@@ -1043,13 +1198,11 @@ const loginStats = [
 .pets-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .pet-profile-card { background: white; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .pp-cover { height: 140px; position: relative; display: flex; align-items: flex-end; padding: 14px 20px; }
-.pp-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: var(--shadow-md); }
 .pp-health-badge {
   position: absolute; top: 14px; right: 14px;
   font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 100px;
 }
-.pp-health-badge.vaccinated { background: rgba(220,252,231,0.9); color: #166534; }
-.pp-health-badge.due        { background: rgba(254,226,226,0.9); color: var(--red); }
+.pp-health-badge.due { background: rgba(254,226,226,0.9); color: var(--red); }
 .pp-body { padding: 16px 20px; }
 .pp-body h3  { font-size: 1.1rem; margin-bottom: 2px; }
 .pp-sub  { font-size: 0.78rem; color: var(--text-light); margin-bottom: 16px; }
@@ -1059,14 +1212,6 @@ const loginStats = [
 .pp-attr-val { font-size: 0.82rem; color: var(--navy); font-weight: 600; }
 .pp-divider  { height: 1px; background: var(--border); margin: 14px 0; }
 .pp-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal); font-weight: 700; margin-bottom: 10px; }
-.pp-vacc-list { display: flex; flex-direction: column; gap: 7px; }
-.pp-vacc-item { display: flex; align-items: center; font-size: 0.8rem; }
-.pp-vacc-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.pp-vacc-date   { font-size: 0.72rem; color: var(--text-light); }
-.pp-vacc-status { font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 100px; text-transform: capitalize; }
-.pp-vacc-status.up-to-date { background: #DCFCE7; color: #166534; }
-.pp-vacc-status.due-soon   { background: #FEF9C3; color: #854D0E; }
-.pp-vacc-status.overdue    { background: #FEE2E2; color: var(--red); }
 .pp-notes { font-size: 0.8rem; color: var(--text-light); line-height: 1.6; }
 
 /* ── Tables ── */
@@ -1089,37 +1234,24 @@ const loginStats = [
 .tl-item  { display: flex; gap: 14px; }
 .tl-marker { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
 .tl-marker.wellness  { background: var(--teal); }
-.tl-marker.vaccine   { background: #3B82F6; }
-.tl-marker.procedure { background: #8B5CF6; }
-.tl-marker.emergency { background: var(--red); }
-.tl-stem  { position: absolute; left: 5px; top: 18px; width: 2px; background: var(--border); bottom: -12px; display: none; }
 .tl-body  { flex: 1; padding-bottom: 20px; }
 .tl-date  { font-size: 0.7rem; color: var(--text-light); margin-bottom: 6px; }
 .tl-card  { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .tl-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .tl-card-head strong { font-size: 0.86rem; }
-.type-chip { font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 100px; text-transform: capitalize; }
-.type-chip.wellness  { background: var(--teal-light);  color: var(--teal-dark); }
-.type-chip.vaccine   { background: #DBEAFE;              color: #1D4ED8; }
-.type-chip.procedure { background: #F3E8FF;              color: #6D28D9; }
-.type-chip.emergency { background: #FEE2E2;              color: var(--red); }
 .tl-meta  { font-size: 0.72rem; color: var(--text-light); margin-bottom: 6px; }
-.tl-notes { font-size: 0.8rem; color: var(--text); line-height: 1.5; }
+.tl-notes { font-size: 0.8rem; color: var(--text); line-height: 1.5; margin-top: 4px; }
 .tl-tags  { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-.tl-tag   { background: var(--gray-100); color: var(--text-light); font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; }
+.tl-tag   { background: var(--gray-100); color: var(--text-light); font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; text-transform: capitalize; }
 
 .vacc-schedule { margin-bottom: 20px; }
 .vs-pet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.vs-avatar   { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.vs-avatar   { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; font-size: 0.8rem; }
 .vs-pet-head strong { font-size: 0.86rem; }
 .vs-rows { display: flex; flex-direction: column; gap: 5px; }
-.vs-row  { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--gray-50); border-radius: 7px; font-size: 0.78rem; }
-.vs-name { flex: 1; }
-.vs-date { font-size: 0.7rem; color: var(--text-light); }
-.vs-chip { font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 100px; text-transform: capitalize; }
-.vs-chip.up-to-date { background: #DCFCE7; color: #166534; }
-.vs-chip.due-soon   { background: #FEF9C3; color: #854D0E; }
-.vs-chip.overdue    { background: #FEE2E2; color: var(--red); }
+.vs-row  { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: var(--gray-50); border-radius: 7px; font-size: 0.78rem; }
+.vs-name { flex-shrink: 0; font-weight: 600; color: var(--navy); }
+.vs-date { font-size: 0.75rem; color: var(--text-light); text-align: right; }
 
 /* ── Prescriptions ── */
 .rx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 16px; }
@@ -1131,56 +1263,31 @@ const loginStats = [
 .rx-icon-wrap svg { stroke: currentColor; }
 .rx-head-info strong { display: block; font-size: 0.88rem; color: var(--navy); }
 .rx-head-info small  { font-size: 0.72rem; color: var(--text-light); }
-.rx-chip { margin-left: auto; font-size: 0.62rem; font-weight: 700; padding: 3px 10px; border-radius: 100px; }
+.rx-chip { margin-left: auto; font-size: 0.62rem; font-weight: 700; padding: 3px 10px; border-radius: 100px; text-transform: capitalize; }
 .rx-chip.active  { background: #DCFCE7; color: #166534; }
 .rx-chip.expired { background: var(--gray-100); color: var(--gray-400); }
 .rx-details { padding: 14px 18px; display: flex; flex-direction: column; gap: 7px; }
-.rx-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
-.rx-key { color: var(--text-light); }
+.rx-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8rem; }
+.rx-key { color: var(--text-light); font-weight: 600; flex-shrink: 0; }
 .rx-footer { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); }
 
-/* ── Messages ── */
-.messages-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 500px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.msg-list { border-right: 1px solid var(--border); overflow-y: auto; }
-.msg-thread {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 14px 16px; cursor: pointer; position: relative;
-  border-bottom: 1px solid var(--border);
-  transition: background var(--transition);
+/* ── Notifications feed ── */
+.notif-feed { display: flex; flex-direction: column; gap: 10px; }
+.notif-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: white; border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-.msg-thread:hover { background: var(--gray-50); }
-.msg-thread.active { background: var(--teal-xlight); }
-.msg-thread.unread { background: var(--teal-xlight); }
-.msg-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
-.msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.msg-preview { flex: 1; min-width: 0; }
-.msg-from-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-.msg-from-row strong { font-size: 0.8rem; color: var(--navy); }
-.msg-time { font-size: 0.65rem; color: var(--text-light); white-space: nowrap; }
-.msg-snippet { font-size: 0.75rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.msg-unread-dot { width: 7px; height: 7px; background: var(--teal); border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
-.msg-body { padding: 24px; display: flex; flex-direction: column; }
-.msg-full-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-.msg-full-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.msg-full-head strong { display: block; font-size: 0.9rem; color: var(--navy); }
-.msg-full-head small  { font-size: 0.72rem; color: var(--text-light); }
-.msg-full-body { font-size: 0.86rem; color: var(--text); line-height: 1.7; flex: 1; }
-.msg-reply-box { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
-.msg-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text-light); font-size: 0.85rem; }
-
-/* ── Orders ── */
-.orders-list { display: flex; flex-direction: column; gap: 16px; }
-.order-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.order-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--gray-50); }
-.order-id   { font-size: 0.85rem; font-weight: 700; color: var(--navy); }
-.order-date { font-size: 0.75rem; color: var(--text-light); }
-.order-items { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
-.order-item  { display: flex; align-items: center; gap: 12px; }
-.order-img   { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
-.order-item-info strong { display: block; font-size: 0.84rem; color: var(--navy); }
-.order-item-info small  { font-size: 0.7rem; color: var(--text-light); }
-.order-price { margin-left: auto; font-weight: 700; font-size: 0.88rem; color: var(--teal); }
-.order-foot  { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 0.85rem; }
+.notif-icon {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.notif-icon.danger { background: #FEE2E2; color: var(--red); }
+.notif-icon.warn   { background: #FEF3C7; color: #B45309; }
+.notif-icon.ok     { background: var(--teal-light); color: var(--teal-dark); }
+.notif-content strong { display: block; font-size: 0.88rem; color: var(--navy); margin-bottom: 2px; }
+.notif-content p { font-size: 0.82rem; color: var(--text-light); margin-bottom: 4px; }
+.notif-content small { font-size: 0.7rem; color: var(--gray-400); }
 
 /* ── Billing ── */
 .billing-summary {
@@ -1200,7 +1307,8 @@ const loginStats = [
 .profile-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--teal); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; flex-shrink: 0; }
 .profile-avatar-row strong { display: block; font-size: 0.9rem; color: var(--navy); }
 .profile-avatar-row p { font-size: 0.75rem; color: var(--text-light); }
-.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-hint { font-size: 0.72rem; color: var(--text-light); margin-top: 10px; }
+.save-confirm { margin-left: 10px; font-size: 0.78rem; color: var(--teal-dark); font-weight: 600; }
 .notif-list { display: flex; flex-direction: column; gap: 14px; }
 .notif-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .notif-item strong { display: block; font-size: 0.84rem; color: var(--navy); }
@@ -1227,14 +1335,36 @@ const loginStats = [
   .login-split { grid-template-columns: 1fr; }
   .login-right { display: none; }
   .dash-layout { grid-template-columns: 1fr; }
-  .sidebar     { display: none; }
+  .dash-hamburger { display: flex; }
+
+  /* Sidebar becomes a slide-in drawer, triggered by the topbar hamburger,
+     instead of being hidden outright — otherwise most sections (billing,
+     settings, health records...) become unreachable on mobile. */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 260px;
+    height: 100vh;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 260ms var(--ease-out);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .mobile-nav-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(10,22,40,0.5);
+    z-index: 1000;
+  }
+
   .records-cols { grid-template-columns: 1fr; }
   .pets-detail-grid { grid-template-columns: 1fr; }
-  .messages-layout  { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .login-body { padding: 28px 28px 36px; }
   .dash-body  { padding: 16px; }
+  .dash-topbar { padding: 0 14px; }
+  .tb-user-name { display: none; }
+  .tb-user { padding: 6px 8px; }
   .kpi-row    { grid-template-columns: repeat(2,1fr); gap: 10px; }
   .quick-actions { gap: 6px; }
   .settings-grid { grid-template-columns: 1fr; }

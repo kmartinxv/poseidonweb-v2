@@ -11,6 +11,7 @@
   --navy:        #0D2B4B;
   --navy-light:  #1A3D63;
   --red:         #C0392B;   /* Poseidon red — accent hints only */
+  --brand-red:   #E02020;   /* Logo paw red — reserved for warm/positive touches (wishlist, favourites), never errors */
   --white:       #FFFFFF;
   --bg:          #F8FFFE;
 

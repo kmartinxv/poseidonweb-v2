@@ -18,20 +18,26 @@
 
       <!-- Nav links -->
       <nav class="nav-links" :class="{ open: menuOpen }" @click.self="menuOpen = false">
-        <RouterLink v-for="l in links" :key="l.to" :to="l.to" class="nav-link" @click="menuOpen = false">
+        <RouterLink
+          v-for="l in links"
+          :key="l.to"
+          :to="l.to"
+          :class="['nav-link', { 'nav-link-secondary': l.secondary }]"
+          @click="menuOpen = false"
+        >
           {{ l.label }}
         </RouterLink>
       </nav>
 
       <!-- Right side -->
       <div class="nav-right">
-        <a href="tel:+254780415469" class="nav-phone">
+        <a href="tel:+254202470436" class="nav-phone">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.28 6.28l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/>
           </svg>
           <div class="phone-text">
             <small>Call Anytime</small>
-            <span>+254 780 415 469</span>
+            <span>+254 20 2470436</span>
           </div>
         </a>
 
@@ -78,6 +84,7 @@ const links = [
   { to: '/appointments', label: 'Appointments' },
   { to: '/blog',         label: 'Blog' },
   { to: '/contact',      label: 'Contact' },
+  { to: '/login',        label: 'Client Portal', secondary: true },
 ]
 
 const scrolled  = ref(false)
@@ -161,6 +168,14 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   background: var(--teal);
   border-radius: 1px;
 }
+.nav-link-secondary {
+  margin-left: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--gray-400);
+}
+.nav-link-secondary:hover { color: var(--navy); }
 
 /* Right side */
 .nav-right {
@@ -253,7 +268,13 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
     top: 72px;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* Explicit height, not "bottom: 0" — .navbar's backdrop-filter makes it
+       the containing block for this fixed element, so "bottom: 0" resolves
+       against navbar's own ~72px box instead of the viewport, collapsing
+       the panel's height. calc(100vh, ...) is viewport-relative regardless. */
+    height: calc(100vh - 72px);
+    height: calc(100dvh - 72px);
+    overflow-y: auto;
     background: white;
     flex-direction: column;
     align-items: flex-start;
@@ -267,6 +288,15 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
   .nav-links.open { transform: translateX(0); }
   .nav-link { font-size: 1rem; padding: 12px 16px; width: 100%; border-radius: 8px; }
   .nav-link.router-link-active::after { bottom: 6px; }
+  .nav-link-secondary {
+    margin-left: 0;
+    margin-top: 8px;
+    padding-left: 16px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    font-size: 0.85rem;
+  }
   .hamburger { display: flex; }
   .menu-backdrop { display: block; }
 }

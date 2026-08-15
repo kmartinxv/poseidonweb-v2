@@ -28,6 +28,10 @@
           <!-- Step 0: Select Service -->
           <div v-if="currentStep === 0" class="step-panel">
             <h3>1. Select Service</h3>
+            <div v-if="bookingCategory" class="preselect-banner">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Booking a <strong>{{ bookingCategory }}</strong> service — change it below if needed.
+            </div>
             <div class="form-group">
               <label class="form-label">Service Type</label>
               <select v-model="form.service" class="form-control">
@@ -35,14 +39,13 @@
                 <option v-for="s in serviceOptions" :key="s" :value="s">{{ s }}</option>
               </select>
             </div>
+            <div class="clinic-branch-note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              All appointments are at our <strong>Langata (Main)</strong> branch — Mai Mahiu Rd, opp. Magharibi Place.
+            </div>
             <div class="form-group" style="margin-top:16px">
-              <label class="form-label">Branch / Location</label>
-              <select v-model="form.branch" class="form-control">
-                <option value="Langata (Main)">Langata (Main)</option>
-                <option value="Westlands">Westlands</option>
-                <option value="Karen">Karen</option>
-                <option value="Mombasa Road">Mombasa Road</option>
-              </select>
+              <label class="form-label">Where Are You Coming From?</label>
+              <input type="text" v-model="form.clientArea" class="form-control" placeholder="e.g. Karen, Westlands, South B..." />
             </div>
           </div>
 
@@ -109,6 +112,10 @@
               <div class="form-group">
                 <label class="form-label">Pet Name &amp; Species</label>
                 <input type="text" v-model="form.pet" class="form-control" placeholder="Simba — German Shepherd" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pet Age</label>
+                <input type="text" v-model="form.petAge" class="form-control" placeholder="e.g. 2 years, or 6 months" />
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Reason for Visit (Optional)</label>
@@ -222,33 +229,46 @@
 
 <script setup>
 import { ref, computed }   from 'vue'
+import { useRoute }        from 'vue-router'
 import { team }            from '../data/team.js'
 import { useScrollReveal } from '../composables/useScrollReveal.js'
 useScrollReveal()
+
+const route = useRoute()
 
 const steps = ['Service', 'Doctor', 'Date & Time', 'Your Info', 'Confirm']
 const currentStep = ref(0)
 const submitted   = ref(false)
 
 const form = ref({
-  service: '',
-  branch:  'Langata (Main)',
-  vetId:   null,
-  date:    '',
-  time:    '',
-  name:    '',
-  phone:   '',
-  email:   '',
-  pet:     '',
-  notes:   '',
+  service:    typeof route.query.service === 'string' ? route.query.service : '',
+  branch:     'Langata (Main)',
+  clientArea: '',
+  vetId:      null,
+  date:       '',
+  time:       '',
+  name:       '',
+  phone:      '',
+  email:      '',
+  pet:        '',
+  petAge:     '',
+  notes:      '',
 })
 
 const minDate = new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
-const serviceOptions = [
+const baseServiceOptions = [
   'General Consultation', 'Wellness Check-up', 'Vaccination', 'Dental Check', 'Surgery Consultation',
   'Lab / Diagnostics', 'Emergency', 'Grooming', 'Boarding Enquiry', 'Nutrition Counselling',
 ]
+const serviceOptions = computed(() => {
+  const preselected = form.value.service
+  if (preselected && !baseServiceOptions.includes(preselected)) {
+    return [preselected, ...baseServiceOptions]
+  }
+  return baseServiceOptions
+})
+const bookingCategory = typeof route.query.category === 'string' ? route.query.category : ''
 const vetOptions = team.filter(m => m.role.includes('Vet') || m.role.includes('Chief')).slice(0, 4)
 const timeSlots = [
   '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
@@ -256,7 +276,7 @@ const timeSlots = [
 ]
 
 const canProceed = computed(() => {
-  if (currentStep.value === 0) return form.value.service && form.value.branch
+  if (currentStep.value === 0) return form.value.service && form.value.clientArea
   if (currentStep.value === 1) return form.value.vetId !== null
   if (currentStep.value === 2) return form.value.date && form.value.time
   if (currentStep.value === 3) return form.value.name && form.value.phone && form.value.email
@@ -269,7 +289,7 @@ const summaryItems = computed(() => [
   { label: 'Doctor',   value: selectedVet.value?.name || 'Not selected',   icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' },
   { label: 'Date',     value: form.value.date || 'Not selected',           icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z' },
   { label: 'Time',     value: form.value.time || 'Not selected',           icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-14v4l3 3' },
-  { label: 'Location', value: form.value.branch,                           icon: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' },
+  { label: 'Coming From', value: form.value.clientArea || 'Not selected',  icon: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' },
 ])
 
 const trustItems = [
@@ -352,6 +372,32 @@ const trustItems = [
   margin-bottom: 24px;
 }
 .step-panel h3 { margin-bottom: 20px; font-size: 1.05rem; }
+.preselect-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--teal-xlight);
+  border: 1px solid var(--teal-light);
+  color: var(--navy);
+  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+}
+.preselect-banner svg { flex-shrink: 0; color: var(--teal); }
+.clinic-branch-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-light);
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.clinic-branch-note svg { flex-shrink: 0; color: var(--teal); }
+.clinic-branch-note strong { color: var(--navy); }
 .date-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-2col     { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .info-secure   { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-light); margin-top: 16px; }

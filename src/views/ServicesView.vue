@@ -34,7 +34,7 @@
 
           <!-- Right: 3×2 service cards -->
           <div class="sh-grid" id="all-services">
-            <div class="sh-card card" v-for="s in services" :key="s.id">
+            <RouterLink :to="`/services/${s.slug}`" class="sh-card card" v-for="s in services" :key="s.id">
               <div class="icon-circle">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path :d="serviceIconPaths[s.icon]"/>
@@ -42,16 +42,19 @@
               </div>
               <h3>{{ s.title }}</h3>
               <p>{{ s.desc }}</p>
-              <RouterLink to="/appointments" class="learn-more">
-                Book Now
+              <span class="learn-more">
+                View Services &amp; Prices
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </RouterLink>
-            </div>
+              </span>
+            </RouterLink>
           </div>
 
         </div>
       </div>
     </section>
+
+    <!-- Promo banners (staff-managed) -->
+    <PromoBanner placement="services" />
 
     <!-- Bottom trust strip -->
     <section class="trust-bottom">
@@ -83,7 +86,7 @@
             <h3 style="color:white;margin-bottom:6px">Pet Emergency?</h3>
             <p style="color:rgba(255,255,255,0.8);font-size:0.9rem">We offer same-day urgent appointments for accidents, sudden illness, and critical conditions. Call us immediately.</p>
           </div>
-          <a href="tel:+254780415469" class="btn" style="background:white;color:var(--red);font-weight:700;white-space:nowrap;margin-left:auto;flex-shrink:0">
+          <a :href="`tel:${PHONE_TEL}`" class="btn" style="background:white;color:var(--red);font-weight:700;white-space:nowrap;margin-left:auto;flex-shrink:0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.28 6.28l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/></svg>
             Call Now
           </a>
@@ -96,7 +99,9 @@
 
 <script setup>
 import { services, serviceIconPaths } from '../data/services.js'
+import { PHONE_TEL }                  from '../data/contact.js'
 import { useScrollReveal }            from '../composables/useScrollReveal.js'
+import PromoBanner                    from '../components/PromoBanner.vue'
 useScrollReveal()
 
 const trustItems = [

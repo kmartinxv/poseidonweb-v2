@@ -27,16 +27,7 @@
             <img :src="post.image" :alt="post.title" />
           </div>
 
-          <div class="article-body">
-            <template v-for="(block, i) in post.body" :key="i">
-              <p v-if="block.type === 'p'">{{ block.text }}</p>
-              <h2 v-else-if="block.type === 'h2'">{{ block.text }}</h2>
-              <blockquote v-else-if="block.type === 'quote'">{{ block.text }}</blockquote>
-              <ul v-else-if="block.type === 'ul'">
-                <li v-for="(item, j) in block.items" :key="j" v-html="item"></li>
-              </ul>
-            </template>
-          </div>
+          <div class="article-body" v-html="renderedBody"></div>
 
           <div class="article-cta">
             <RouterLink to="/appointments" class="btn btn-primary btn-lg">
@@ -60,9 +51,9 @@
           <div class="sidebar-card card" style="margin-top:20px">
             <h4>Contact Us</h4>
             <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:14px">Have a question? Our vets are happy to help.</p>
-            <a href="tel:+254780415469" class="sidebar-contact">
+            <a :href="`tel:${PHONE_TEL}`" class="sidebar-contact">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.28 6.28l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/></svg>
-              +254 780 415 469
+              {{ PHONE_DISPLAY }}
             </a>
             <a href="mailto:info@poseidonvet.com" class="sidebar-contact" style="margin-top:8px">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -74,6 +65,9 @@
       </div>
     </div>
   </div>
+  <div v-else-if="loading" class="container" style="padding-top:160px;padding-bottom:120px;text-align:center">
+    <p class="text-light">Loading article…</p>
+  </div>
   <div v-else class="container" style="padding-top:160px;padding-bottom:120px;text-align:center">
     <h2>Article not found</h2>
     <p class="text-light" style="margin-top:8px">The article you're looking for doesn't exist or may have been moved.</p>
@@ -82,12 +76,31 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute }  from 'vue-router'
-import { posts }     from '../data/blog.js'
+import { ref, computed, watch } from 'vue'
+import { useRoute }             from 'vue-router'
+import { fetchBlogPostBySlug }  from '../composables/useBlogPosts.js'
+import { renderMarkdownLite }   from '../lib/markdownLite.js'
+import { PHONE_DISPLAY, PHONE_TEL } from '../data/contact.js'
 
-const route = useRoute()
-const post  = computed(() => posts.find(p => p.slug === route.params.slug))
+const route   = useRoute()
+const post    = ref(null)
+const loading = ref(true)
+
+async function load() {
+  loading.value = true
+  post.value = null
+  try {
+    post.value = await fetchBlogPostBySlug(route.params.slug)
+  } catch {
+    post.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => route.params.slug, load, { immediate: true })
+
+const renderedBody = computed(() => renderMarkdownLite(post.value?.body || ''))
 </script>
 
 <style scoped>

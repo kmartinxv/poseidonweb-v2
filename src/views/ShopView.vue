@@ -7,74 +7,124 @@
         <span class="eyebrow">Poseidon Pet Shop</span>
         <h1>Quality Products,<br><span class="teal wavy-line">Vet Approved</span></h1>
         <p>Prescription foods, supplements, medications, accessories, and grooming essentials — curated by our vets.</p>
-        <!-- Category filters -->
-        <div class="cat-filters">
-          <button
-            v-for="cat in categories"
-            :key="cat"
-            :class="['cat-btn', { active: activeCategory === cat }]"
-            @click="activeCategory = cat"
-          >{{ cat }}</button>
+      </div>
+    </section>
+
+    <!-- On-sale promo banners -->
+    <section class="shop-banners" v-if="banners.length">
+      <div class="container">
+        <div class="banner-strip">
+          <RouterLink
+            v-for="b in banners"
+            :key="b.id"
+            :to="b.link || '/shop'"
+            class="promo-banner"
+            :style="b.image ? { backgroundImage: `url(${b.image})` } : {}"
+          >
+            <div class="promo-overlay">
+              <strong>{{ b.title }}</strong>
+              <span v-if="b.subtitle">{{ b.subtitle }}</span>
+            </div>
+          </RouterLink>
         </div>
       </div>
     </section>
 
-    <!-- Products grid -->
+    <!-- Shop body: sidebar + grid -->
     <section class="section shop-body">
       <div class="container">
-        <div class="shop-header-row">
-          <p class="product-count">{{ filteredProducts.length }} products</p>
-          <div class="shop-sort">
-            <label>Sort by</label>
-            <select v-model="sortBy" class="form-control" style="width:auto">
-              <option value="default">Featured</option>
-              <option value="price-asc">Price: Low–High</option>
-              <option value="price-desc">Price: High–Low</option>
-              <option value="rating">Top Rated</option>
-            </select>
-          </div>
-        </div>
+        <div class="shop-layout">
 
-        <div class="products-grid">
-          <div class="product-card card" v-for="p in sortedProducts" :key="p.id">
-            <RouterLink :to="`/shop/${p.id}`" class="product-img-wrap">
-              <img :src="p.image" :alt="p.name" loading="lazy" />
-              <span v-if="p.badge" :class="['product-badge', getBadgeClass(p.badge)]">{{ p.badge }}</span>
-              <span v-if="!p.inStock" class="product-oos">Out of Stock</span>
-            </RouterLink>
-            <div class="product-info">
-              <div class="product-cat">{{ p.category }}</div>
-              <RouterLink :to="`/shop/${p.id}`"><h3 class="product-name">{{ p.name }}</h3></RouterLink>
-              <div class="product-rating">
-                <div class="stars-sm">
-                  <svg v-for="n in 5" :key="n" width="12" height="12" viewBox="0 0 24 24" :fill="n <= Math.round(p.rating) ? 'var(--teal)' : 'var(--gray-200)'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
-                <span class="rating-count">{{ p.rating }} ({{ p.reviews }})</span>
-              </div>
-              <div class="product-price-row">
-                <div class="price-group">
-                  <span class="price-current">KES {{ p.price.toLocaleString() }}</span>
-                  <span v-if="p.oldPrice" class="price-old">KES {{ p.oldPrice.toLocaleString() }}</span>
-                </div>
-                <button
-                  :class="['add-btn', { 'added': addedIds.includes(p.id) }]"
-                  :disabled="!p.inStock"
-                  @click="handleAdd(p)"
-                >
-                  <svg v-if="!addedIds.includes(p.id)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                </button>
+          <!-- Sidebar -->
+          <aside class="shop-sidebar">
+            <h4>Categories</h4>
+            <nav class="cat-list">
+              <button
+                :class="['cat-item', { active: activeCategory === 'All' }]"
+                @click="activeCategory = 'All'"
+              >
+                All Products
+                <span class="cat-count">{{ products.length }}</span>
+              </button>
+              <button
+                v-for="cat in categories"
+                :key="cat.id"
+                :class="['cat-item', { active: activeCategory === cat.slug }]"
+                @click="activeCategory = cat.slug"
+              >
+                {{ cat.name }}
+                <span class="cat-count">{{ countInCategory(cat.slug) }}</span>
+              </button>
+            </nav>
+          </aside>
+
+          <!-- Products -->
+          <div class="shop-main">
+            <div class="shop-header-row">
+              <p class="product-count">{{ loading ? 'Loading…' : `${sortedProducts.length} products` }}</p>
+              <div class="shop-sort">
+                <label>Sort by</label>
+                <select v-model="sortBy" class="form-control" style="width:auto">
+                  <option value="default">Featured</option>
+                  <option value="price-asc">Price: Low–High</option>
+                  <option value="price-desc">Price: High–Low</option>
+                  <option value="rating">Top Rated</option>
+                </select>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Empty state -->
-        <div v-if="sortedProducts.length === 0" class="empty-state">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <h3>No products found</h3>
-          <p>Try a different category.</p>
-          <button class="btn btn-primary" @click="activeCategory = 'All'">View All</button>
+            <div class="products-grid">
+              <div class="product-card card" v-for="p in sortedProducts" :key="p.id">
+                <RouterLink :to="`/shop/${p.id}`" class="product-img-wrap">
+                  <img :src="p.image" :alt="p.name" loading="lazy" />
+                  <span v-if="p.badge" :class="['product-badge', getBadgeClass(p.badge)]">{{ p.badge }}</span>
+                  <span v-if="!p.inStock" class="product-oos">Out of Stock</span>
+                </RouterLink>
+                <button
+                  :class="['wishlist-btn', { active: isWishlisted(p.id) }]"
+                  :aria-label="isWishlisted(p.id) ? 'Remove from wishlist' : 'Add to wishlist'"
+                  @click="toggleWishlist(p.id)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" :fill="isWishlisted(p.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
+                <div class="product-info">
+                  <div class="product-cat">{{ p.category }}</div>
+                  <RouterLink :to="`/shop/${p.id}`"><h3 class="product-name">{{ p.name }}</h3></RouterLink>
+                  <div class="product-rating">
+                    <div class="stars-sm">
+                      <svg v-for="n in 5" :key="n" width="12" height="12" viewBox="0 0 24 24" :fill="n <= Math.round(p.rating) ? 'var(--teal)' : 'var(--gray-200)'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                    <span class="rating-count">{{ p.rating }} ({{ p.reviews }})</span>
+                  </div>
+                  <div class="product-price-row">
+                    <div class="price-group">
+                      <span class="price-current">KES {{ p.price.toLocaleString() }}</span>
+                      <span v-if="p.oldPrice" class="price-old">KES {{ p.oldPrice.toLocaleString() }}</span>
+                    </div>
+                    <button
+                      :class="['add-btn', { 'added': addedIds.includes(p.id) }]"
+                      :disabled="!p.inStock"
+                      @click="handleAdd(p)"
+                    >
+                      <svg v-if="!addedIds.includes(p.id)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-if="!loading && sortedProducts.length === 0" class="empty-state">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h3>No products found</h3>
+              <p>Try a different category.</p>
+              <button class="btn btn-primary" @click="activeCategory = 'All'">View All</button>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -101,23 +151,37 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { products, categories } from '../data/products.js'
-import { useCart }              from '../composables/useCart.js'
-import { useToast }             from '../composables/useToast.js'
-import { useScrollReveal }      from '../composables/useScrollReveal.js'
+import { useRoute }      from 'vue-router'
+import { useProducts }   from '../composables/useProducts.js'
+import { useCategories } from '../composables/useCategories.js'
+import { useBanners }    from '../composables/useBanners.js'
+import { useCart }         from '../composables/useCart.js'
+import { useWishlist }     from '../composables/useWishlist.js'
+import { useToast }        from '../composables/useToast.js'
+import { useScrollReveal } from '../composables/useScrollReveal.js'
 
 useScrollReveal()
 
+const route = useRoute()
+const { products, loading } = useProducts()
+const { categories }        = useCategories()
+const { banners }           = useBanners('shop')
+
 const { addItem }  = useCart()
+const { isWishlisted, toggleWishlist } = useWishlist()
 const { success }  = useToast()
-const activeCategory = ref('All')
+const activeCategory = ref(typeof route.query.category === 'string' ? route.query.category : 'All')
 const sortBy         = ref('default')
 const addedIds       = ref([])
 
+function countInCategory(slug) {
+  return products.value.filter(p => p.categorySlug === slug).length
+}
+
 const filteredProducts = computed(() =>
   activeCategory.value === 'All'
-    ? products
-    : products.filter(p => p.category === activeCategory.value)
+    ? products.value
+    : products.value.filter(p => p.categorySlug === activeCategory.value)
 )
 
 const sortedProducts = computed(() => {
@@ -155,37 +219,99 @@ const promises = [
 
 <style scoped>
 .shop-hero {
-  padding: 136px 0 64px;
+  padding: 136px 0 40px;
   background: var(--bg);
   text-align: center;
 }
 .shop-hero h1  { margin: 8px 0 16px; }
-.shop-hero p   { color: var(--text-light); max-width: 520px; margin: 0 auto 32px; }
-.cat-filters   { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.cat-btn {
-  padding: 9px 20px;
-  border-radius: 100px;
-  border: 1.5px solid var(--border);
-  background: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-light);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-.cat-btn:hover  { border-color: var(--teal); color: var(--teal); }
-.cat-btn.active { background: var(--teal); border-color: var(--teal); color: white; }
+.shop-hero p   { color: var(--text-light); max-width: 520px; margin: 0 auto; }
 
+/* Promo banners */
+.shop-banners { background: var(--bg); padding-bottom: 40px; }
+.banner-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.promo-banner {
+  position: relative;
+  display: block;
+  min-height: 100px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--teal-dark) 100%);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+.promo-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(13,43,75,0.88) 0%, rgba(13,43,75,0.55) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px 24px;
+  color: white;
+}
+.promo-overlay strong { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
+.promo-overlay span   { font-size: 0.82rem; color: rgba(255,255,255,0.8); }
+
+/* Layout */
+.shop-layout { display: grid; grid-template-columns: 240px 1fr; gap: 32px; align-items: start; }
+
+/* Sidebar */
+.shop-sidebar {
+  position: sticky;
+  top: 96px;
+  background: var(--gray-50);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.shop-sidebar h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light); margin-bottom: 14px; }
+.cat-list { display: flex; flex-direction: column; gap: 2px; }
+.cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  transition: background var(--transition), color var(--transition);
+}
+.cat-item:hover { background: white; color: var(--teal); }
+.cat-item.active { background: var(--teal); color: white; font-weight: 600; }
+.cat-count { font-size: 0.72rem; opacity: 0.7; }
+
+.shop-main { min-width: 0; }
 .shop-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .product-count { font-size: 0.875rem; color: var(--text-light); }
 .shop-sort { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: var(--text-light); }
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
-.product-card { overflow: hidden; }
+.product-card { position: relative; overflow: hidden; }
+.wishlist-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition: color var(--transition), transform 150ms ease;
+}
+.wishlist-btn:hover { color: var(--brand-red); transform: scale(1.1); }
+.wishlist-btn.active { color: var(--brand-red); }
 .product-img-wrap {
   display: block;
   position: relative;
@@ -272,7 +398,13 @@ const promises = [
 .promise-item strong { display: block; font-size: 0.85rem; color: var(--navy); }
 .promise-item span   { font-size: 0.75rem; color: var(--text-light); }
 
-@media (max-width: 1200px) { .products-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1100px) {
+  .shop-layout { grid-template-columns: 1fr; }
+  .shop-sidebar { position: static; }
+  .cat-list { flex-direction: row; flex-wrap: wrap; }
+  .cat-item { flex: 1; min-width: 140px; justify-content: center; }
+  .products-grid { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 900px)  { .products-grid { grid-template-columns: repeat(2, 1fr); } .promise-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px)  { .shop-hero { padding-top: 100px; } .products-grid { grid-template-columns: 1fr; } .promise-grid { grid-template-columns: 1fr; } }
 </style>

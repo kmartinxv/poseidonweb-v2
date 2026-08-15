@@ -105,6 +105,7 @@
 <script setup>
 import { ref, reactive }   from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal.js'
+import { PHONE_DISPLAY, PHONE_TEL, whatsappLink } from '../data/contact.js'
 useScrollReveal()
 
 const defaultForm = { name: '', phone: '', email: '', subject: '', message: '' }
@@ -115,7 +116,12 @@ const contactCards = [
   {
     title: 'Call Us',
     icon:  'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.28 6.28l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z',
-    lines: ['<a href="tel:+254780415469" style="color:var(--teal);font-weight:600">+254 780 415 469</a>', 'Available Mon–Sat 9am–5pm, Sun 10am–4pm'],
+    lines: [`<a href="tel:${PHONE_TEL}" style="color:var(--teal);font-weight:600">${PHONE_DISPLAY}</a>`, 'Available Mon–Sat 9am–5pm, Sun 10am–4pm'],
+  },
+  {
+    title: 'Chat on WhatsApp',
+    icon:  'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z',
+    lines: [`<a href="${whatsappLink()}" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600">Message us directly</a>`, 'Usually replies within minutes during clinic hours.'],
   },
   {
     title: 'Email Us',

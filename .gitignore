@@ -1,3 +1,11 @@
 node_modules
 dist
 .env
+.claude/
+
+# PHP API — real DB credentials, never commit
+api/config/config.php
+
+# User-uploaded product/blog/banner images (keep the folder + .htaccess, not the files)
+api/uploads/*
+!api/uploads/.htaccess

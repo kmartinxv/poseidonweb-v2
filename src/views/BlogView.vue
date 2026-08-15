@@ -11,6 +11,10 @@
     <section class="section">
       <div class="container">
 
+        <p v-if="loading" class="text-light" style="text-align:center;padding:40px 0">Loading articles…</p>
+        <p v-else-if="!posts.length" class="text-light" style="text-align:center;padding:40px 0">No articles published yet.</p>
+
+        <template v-else>
         <!-- Featured post -->
         <div class="featured-post card" v-if="posts.length">
           <RouterLink :to="`/blog/${posts[0].slug}`" class="featured-img">
@@ -55,6 +59,7 @@
             </div>
           </div>
         </div>
+        </template>
 
       </div>
     </section>
@@ -82,8 +87,10 @@
 <script setup>
 import { ref }              from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal.js'
-import { posts }           from '../data/blog.js'
+import { useBlogPosts }    from '../composables/useBlogPosts.js'
 useScrollReveal()
+
+const { posts, loading } = useBlogPosts()
 
 const newsletterEmail = ref('')
 const subscribed      = ref(false)

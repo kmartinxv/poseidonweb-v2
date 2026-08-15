@@ -57,6 +57,15 @@
               {{ added ? 'Added to Cart!' : (product.inStock ? 'Add to Cart' : 'Out of Stock') }}
             </button>
             <RouterLink to="/cart" v-if="added" class="btn btn-secondary btn-lg">View Cart</RouterLink>
+            <button
+              :class="['wishlist-btn-lg', { active: isWishlisted(product.id) }]"
+              :aria-label="isWishlisted(product.id) ? 'Remove from wishlist' : 'Add to wishlist'"
+              @click="toggleWishlist(product.id)"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" :fill="isWishlisted(product.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </button>
           </div>
 
           <div class="product-assurances">
@@ -89,6 +98,9 @@
     </div>
 
   </div>
+  <div v-else-if="loading" class="container" style="padding-top:160px;text-align:center">
+    <p class="text-light">Loading…</p>
+  </div>
   <div v-else class="container" style="padding-top:160px;text-align:center">
     <h2>Product not found</h2>
     <RouterLink to="/shop" class="btn btn-primary" style="margin-top:24px">Back to Shop</RouterLink>
@@ -98,15 +110,18 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { products } from '../data/products.js'
+import { useProducts } from '../composables/useProducts.js'
 import { useCart } from '../composables/useCart.js'
+import { useWishlist } from '../composables/useWishlist.js'
 
 const route = useRoute()
 const { addItem } = useCart()
+const { isWishlisted, toggleWishlist } = useWishlist()
+const { products, loading } = useProducts()
 
-const product = computed(() => products.find(p => p.id === Number(route.params.id)))
+const product = computed(() => products.value.find(p => p.id === Number(route.params.id)))
 const related = computed(() =>
-  products.filter(p => p.id !== product.value?.id && p.category === product.value?.category).slice(0, 4)
+  products.value.filter(p => p.id !== product.value?.id && p.category === product.value?.category).slice(0, 4)
 )
 
 const qty   = ref(1)
@@ -206,6 +221,21 @@ const assurances = [
   font-weight: 600;
 }
 .add-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+.wishlist-btn-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color var(--transition), border-color var(--transition), transform 150ms ease;
+}
+.wishlist-btn-lg:hover { color: var(--brand-red); border-color: var(--brand-red); transform: scale(1.06); }
+.wishlist-btn-lg.active { color: var(--brand-red); border-color: var(--brand-red); background: #FFF3F3; }
 .product-assurances { display: flex; flex-direction: column; gap: 10px; padding: 20px; background: var(--teal-xlight); border-radius: var(--radius); border: 1px solid var(--teal-light); }
 .assurance-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 500; }
 

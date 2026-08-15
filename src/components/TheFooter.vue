@@ -19,13 +19,19 @@
           </RouterLink>
           <p class="footer-tagline">Compassionate, expert veterinary care for every beloved pet in Nairobi and beyond.</p>
           <div class="social-links">
-            <a href="#" aria-label="Facebook" class="social-btn">
+            <a href="https://web.facebook.com/poseidonvet" target="_blank" rel="noopener" aria-label="Facebook" class="social-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
             </a>
-            <a href="#" aria-label="Instagram" class="social-btn">
+            <a href="https://www.instagram.com/poseidon_veterinary_clinic" target="_blank" rel="noopener" aria-label="Instagram" class="social-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
             </a>
-            <a href="https://wa.me/254780415469" target="_blank" rel="noopener" aria-label="WhatsApp" class="social-btn">
+            <a href="https://www.tiktok.com/@poseidonveterinaryclinic" target="_blank" rel="noopener" aria-label="TikTok" class="social-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.82c-.9-.98-1.4-2.26-1.4-3.58h-3.05v13.6c0 1.63-1.32 2.95-2.95 2.95a2.95 2.95 0 0 1 0-5.9c.31 0 .6.05.88.13V9.9a6.02 6.02 0 0 0-.88-.07 6.02 6.02 0 1 0 6.02 6.02V9.28a8.5 8.5 0 0 0 4.98 1.6V7.83a5.6 5.6 0 0 1-3.6-2.01z"/></svg>
+            </a>
+            <a href="#" aria-label="Twitter / X" class="social-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.24 2.75h3.3l-7.2 8.23 8.47 10.27h-6.63l-5.2-6.4-5.94 6.4H1.72l7.7-8.8L1.3 2.75h6.8l4.7 5.85zm-1.16 16.6h1.83L6.98 4.55H5.02z"/></svg>
+            </a>
+            <a :href="whatsappLinkUrl" target="_blank" rel="noopener" aria-label="WhatsApp" class="social-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             </a>
           </div>
@@ -57,7 +63,7 @@
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.28 6.28l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"/></svg>
-              <a href="tel:+254780415469">+254 780 415 469</a>
+              <a :href="`tel:${PHONE_TEL}`">{{ PHONE_DISPLAY }}</a>
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -82,6 +88,7 @@
         <div class="footer-legal">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>
+          <RouterLink to="/admin">Staff Login</RouterLink>
         </div>
       </div>
     </div>
@@ -89,7 +96,10 @@
 </template>
 
 <script setup>
+import { PHONE_DISPLAY, PHONE_TEL, whatsappLink } from '../data/contact.js'
+
 const year = new Date().getFullYear()
+const whatsappLinkUrl = whatsappLink()
 const links = [
   { to: '/',             label: 'Home' },
   { to: '/about',        label: 'About Us' },
@@ -98,7 +108,7 @@ const links = [
   { to: '/appointments', label: 'Book Appointment' },
   { to: '/blog',         label: 'Blog' },
   { to: '/contact',      label: 'Contact' },
-  { to: '/portal',       label: 'Client Portal' },
+  { to: '/login',        label: 'Client Portal' },
 ]
 const serviceLinks = [
   'Wellness & Prevention', 'Vaccinations', 'Surgery', 'Lab & Diagnostics',
