@@ -59,7 +59,8 @@
                 :class="['vet-card card', { selected: form.vetId === vet.id }]"
                 @click="form.vetId = vet.id"
               >
-                <img :src="vet.image" :alt="vet.name" />
+                <img v-if="vet.image" :src="vet.image" :alt="vet.name" />
+                <div v-else class="vet-avatar-fallback">{{ initials(vet.name) }}</div>
                 <div class="vet-info">
                   <strong>{{ vet.name }}</strong>
                   <span>{{ vet.role }}</span>
@@ -235,6 +236,17 @@ import { useScrollReveal } from '../composables/useScrollReveal.js'
 useScrollReveal()
 
 const route = useRoute()
+
+function initials(name) {
+  return name
+    .replace(/^Dr\.?\s*/i, '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+}
 
 const steps = ['Service', 'Doctor', 'Date & Time', 'Your Info', 'Confirm']
 const currentStep = ref(0)
@@ -417,6 +429,12 @@ const trustItems = [
 .vet-card:hover   { border-color: var(--teal-light); }
 .vet-card.selected { border-color: var(--teal); background: var(--teal-xlight); }
 .vet-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+.vet-avatar-fallback {
+  width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--teal-light); color: var(--teal-dark);
+  font-weight: 800; font-size: 0.95rem;
+}
 .vet-info strong  { display: block; font-size: 0.9rem; color: var(--navy); }
 .vet-info span    { font-size: 0.78rem; color: var(--text-light); }
 .vet-rating { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 0.72rem; color: var(--text-light); }

@@ -114,7 +114,8 @@
         <div class="team-full-grid">
           <div class="team-card card" v-for="m in team" :key="m.id">
             <div class="team-img-wrap">
-              <img :src="m.image" :alt="m.name" />
+              <img v-if="m.image" :src="m.image" :alt="m.name" :style="{ objectFit: m.imageFit || 'cover', scale: m.imageZoom || 1 }" />
+              <div v-else class="team-img-fallback">{{ initials(m.name) }}</div>
             </div>
             <div class="team-info">
               <h3>{{ m.name }}</h3>
@@ -133,6 +134,17 @@
 import { team }              from '../data/team.js'
 import { useScrollReveal }   from '../composables/useScrollReveal.js'
 useScrollReveal()
+
+function initials(name) {
+  return name
+    .replace(/^Dr\.?\s*/i, '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+}
 
 const pillars = [
   {
@@ -288,8 +300,14 @@ blockquote { font-size: 1.1rem; line-height: 1.7; color: var(--text); font-style
 }
 .team-card { overflow: hidden; }
 .team-img-wrap { height: 220px; overflow: hidden; }
-.team-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 400ms var(--ease-out); }
+.team-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform-origin: center top; transition: transform 400ms var(--ease-out); }
 .team-card:hover .team-img-wrap img { transform: scale(1.05); }
+.team-img-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--teal-light); color: var(--teal-dark);
+  font-weight: 800; font-size: 2.2rem; letter-spacing: 0.02em;
+}
 .team-info  { padding: 18px; }
 .team-info h3 { font-size: 0.95rem; margin-bottom: 4px; }
 .team-role  { font-size: 0.75rem; color: var(--teal); font-weight: 600; display: block; margin-bottom: 8px; }

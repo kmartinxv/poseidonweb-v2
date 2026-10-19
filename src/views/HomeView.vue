@@ -165,7 +165,8 @@
             :data-delay="i * 100"
           >
             <div class="team-img-wrap">
-              <img :src="m.image" :alt="m.name" loading="lazy" />
+              <img v-if="m.image" :src="m.image" :alt="m.name" :style="{ objectFit: m.imageFit || 'cover', scale: m.imageZoom || 1 }" loading="lazy" />
+              <div v-else class="team-img-fallback">{{ initials(m.name) }}</div>
               <div class="team-overlay">
                 <span class="team-role-overlay">{{ m.role }}</span>
               </div>
@@ -281,6 +282,17 @@ useScrollReveal()
 
 const displayedServices = computed(() => services.slice(0, 6))
 const teamPreview       = computed(() => team.slice(0, 4))
+
+function initials(name) {
+  return name
+    .replace(/^Dr\.?\s*/i, '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+}
 
 const stats = [
   { num: '15+',    label: 'Years of Experience',  icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-14v4l3 3' },
@@ -445,7 +457,13 @@ onMounted(() => {
 .team-section   { background: var(--gray-50); }
 .team-card      { overflow: hidden; }
 .team-img-wrap  { height: 260px; overflow: hidden; position: relative; }
-.team-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 450ms var(--ease-out); }
+.team-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform-origin: center top; transition: transform 450ms var(--ease-out); }
+.team-img-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--teal-light); color: var(--teal-dark);
+  font-weight: 800; font-size: 2.4rem; letter-spacing: 0.02em;
+}
 .team-card:hover .team-img-wrap img { transform: scale(1.07); }
 .team-overlay {
   position: absolute;

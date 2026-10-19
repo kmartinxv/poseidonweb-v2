@@ -1,10 +1,17 @@
+import chesangPhoto  from '../../Images/staff/dr chesang.png'
+import zipporahPhoto from '../../Images/staff/Dr Zipporah.jpeg'
+import margaretPhoto from '../../Images/staff/Margaret.jpg'
+import nguruPhoto    from '../../Images/staff/Dr Kenedy Nguru.jpg'
+
 export const team = [
   {
     id: 1,
     name: 'Dr. Chesang',
     role: 'Chief Veterinarian & Founder',
     bio: 'Over 15 years transforming veterinary care in East Africa. Board-certified in small animal surgery and internal medicine.',
-    image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=500&h=580&q=85',
+    image: chesangPhoto,
+    imageFit: 'contain', // full-body cutout — show arms instead of cropping
+    imageZoom: 1.22,
     socials: { linkedin: '#', twitter: '#' },
   },
   {
@@ -12,23 +19,7 @@ export const team = [
     name: 'Dr. Zipporah Mwaniki',
     role: 'Veterinarian – Medicine & Feline',
     bio: 'Specialist in feline medicine and exotic pets. Known for her gentle, patient-centred approach to every animal she treats.',
-    image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=500&h=580&q=85',
-    socials: { linkedin: '#' },
-  },
-  {
-    id: 3,
-    name: 'Dr. Sharon Molla',
-    role: 'Veterinarian – Surgery',
-    bio: 'Orthopaedic and soft-tissue surgery expert. Trained at the University of Nairobi and Royal Veterinary College, London.',
-    image: 'https://images.unsplash.com/photo-1651008376811-b90baee60c1f?auto=format&fit=crop&w=500&h=580&q=85',
-    socials: { linkedin: '#' },
-  },
-  {
-    id: 4,
-    name: 'Dr. Kennedy Kagucia',
-    role: 'Veterinarian – Diagnostics',
-    bio: 'Specialises in imaging and laboratory diagnostics. Committed to fast, accurate results for even the most complex cases.',
-    image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=500&h=580&q=85',
+    image: zipporahPhoto,
     socials: { linkedin: '#' },
   },
   {
@@ -36,7 +27,7 @@ export const team = [
     name: 'Margaret Nyambura',
     role: 'Clinic Administrator',
     bio: 'The heart of our operations — ensuring every visit runs smoothly from the moment you book to the moment you leave.',
-    image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=500&h=580&q=85',
+    image: margaretPhoto,
     socials: { linkedin: '#' },
   },
   {
@@ -44,15 +35,23 @@ export const team = [
     name: 'Kennedy Nguru',
     role: 'Senior Laboratory Technician',
     bio: 'Expert in haematology, biochemistry, and microbiology. Processes in-house tests with consistent same-day turnaround.',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=500&h=580&q=85',
+    image: nguruPhoto,
     socials: {},
+  },
+  {
+    id: 4,
+    name: 'Dr. Kennedy Kagucia',
+    role: 'Veterinarian – Diagnostics',
+    bio: 'Specialises in imaging and laboratory diagnostics. Committed to fast, accurate results for even the most complex cases.',
+    image: null,
+    socials: { linkedin: '#' },
   },
   {
     id: 7,
     name: 'Stephen Miriongi',
     role: 'Kennel Handler',
     bio: 'Devoted animal lover with 8 years of boarding experience. Ensures every boarding guest feels safe, stimulated, and loved.',
-    image: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=500&h=580&q=85',
+    image: null,
     socials: {},
   },
   {
@@ -60,7 +59,7 @@ export const team = [
     name: 'Julius Nkurunziza',
     role: 'Kennel Handler',
     bio: 'Specialises in enrichment activities for boarded pets. Always ready with a treat, a toy, and a kind word.',
-    image: 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=500&h=580&q=85',
+    image: null,
     socials: {},
   },
 ]
