@@ -86,9 +86,10 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center">
+            <p v-if="sendError" class="send-error">{{ sendError }}</p>
+            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center" :disabled="sending">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Place Order · {{ fmt(total) }}
+              {{ sending ? 'Placing order…' : `Place Order · ${fmt(total)}` }}
             </button>
           </form>
 
@@ -122,7 +123,7 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h2>Order Placed!</h2>
-        <p>Thank you, <strong>{{ f.firstName }}</strong>! We've received your order and will process it within 24 hours. A confirmation will be sent to {{ f.email }}.</p>
+        <p>Thank you, <strong>{{ f.firstName }}</strong>! We've received your order<template v-if="orderRef"> (ref <strong>{{ orderRef }}</strong>)</template> and will process it within 24 hours. A confirmation will be sent to {{ f.email }}.</p>
         <div class="success-actions">
           <RouterLink to="/shop" class="btn btn-primary">Continue Shopping</RouterLink>
           <RouterLink to="/"     class="btn btn-secondary">Back to Home</RouterLink>
@@ -136,6 +137,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useCart } from '../composables/useCart.js'
+import { api } from '../lib/api.js'
+import { PHONE_DISPLAY } from '../data/contact.js'
 
 const { cart, subtotal, shipping, total, fmt, clearCart } = useCart()
 
@@ -146,13 +149,32 @@ const f = ref({
   payment: 'mpesa',
 })
 
-function placeOrder() {
-  orderPlaced.value = true
-  clearCart()
+const sending   = ref(false)
+const sendError = ref('')
+const orderRef  = ref('')
+
+async function placeOrder() {
+  if (sending.value) return
+  sending.value = true
+  sendError.value = ''
+  try {
+    const res = await api.post('/orders/create.php', {
+      ...f.value,
+      items: cart.items.map(i => ({ id: i.id, qty: i.qty })),
+    })
+    orderRef.value = res.ref
+    orderPlaced.value = true
+    clearCart()
+  } catch (e) {
+    sendError.value = `We couldn't place your order (${e.message}). Please try again or call us on ${PHONE_DISPLAY}.`
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
 <style scoped>
+.send-error { color: #b91c1c; font-size: 0.85rem; margin-bottom: 12px; }
 .checkout-layout { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
 .form-section { background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; }
 .form-section h3 { margin-bottom: 20px; font-size: 1.05rem; }

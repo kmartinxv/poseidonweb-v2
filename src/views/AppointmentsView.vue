@@ -137,6 +137,7 @@
               </div>
               <h3>Confirm Your Appointment</h3>
               <p>Please review the details in the summary panel, then confirm.</p>
+              <p v-if="sendError" class="send-error">{{ sendError }}</p>
             </div>
             <div v-else class="success-panel">
               <div class="success-icon">
@@ -163,7 +164,8 @@
             <button
               v-if="currentStep === 4 && !submitted"
               class="btn btn-primary"
-              @click="submitted = true"
+              :disabled="sending"
+              @click="submitBooking"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               Confirm Appointment
@@ -197,8 +199,8 @@
           <button
             class="btn btn-primary btn-lg"
             style="width:100%;justify-content:center;margin-top:20px"
-            :disabled="currentStep < 4"
-            @click="currentStep === 4 && !submitted ? (submitted = true) : null"
+            :disabled="currentStep < 4 || sending"
+            @click="currentStep === 4 && !submitted ? submitBooking() : null"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Confirm Appointment
@@ -232,6 +234,8 @@
 import { ref, computed }   from 'vue'
 import { useRoute }        from 'vue-router'
 import { team }            from '../data/team.js'
+import { PHONE_DISPLAY }   from '../data/contact.js'
+import { api }             from '../lib/api.js'
 import { useScrollReveal } from '../composables/useScrollReveal.js'
 useScrollReveal()
 
@@ -296,6 +300,23 @@ const canProceed = computed(() => {
 })
 
 const selectedVet = computed(() => vetOptions.find(v => v.id === form.value.vetId))
+
+const sending   = ref(false)
+const sendError = ref('')
+
+async function submitBooking() {
+  if (sending.value) return
+  sending.value = true
+  sendError.value = ''
+  try {
+    await api.post('/appointments/request.php', { ...form.value, vet: selectedVet.value?.name || '' })
+    submitted.value = true
+  } catch (e) {
+    sendError.value = `We couldn't send your request (${e.message}). Please try again or call us on ${PHONE_DISPLAY}.`
+  } finally {
+    sending.value = false
+  }
+}
 const summaryItems = computed(() => [
   { label: 'Service',  value: form.value.service || 'Not selected',       icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' },
   { label: 'Doctor',   value: selectedVet.value?.name || 'Not selected',   icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' },
@@ -429,6 +450,7 @@ const trustItems = [
 .vet-card:hover   { border-color: var(--teal-light); }
 .vet-card.selected { border-color: var(--teal); background: var(--teal-xlight); }
 .vet-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+.send-error { color: #b91c1c; font-size: 0.85rem; margin-top: 12px; }
 .vet-avatar-fallback {
   width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;

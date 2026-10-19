@@ -24,4 +24,17 @@ return [
     // this api/ directory, and the public URL prefix used to serve them.
     'upload_dir' => __DIR__ . '/../uploads',
     'upload_url' => '/api/uploads',
+
+    // Outgoing email (website booking + order notifications). On HostGator:
+    // cPanel → Email Accounts → Connect Devices shows these SMTP settings.
+    'mail' => [
+        'host'         => 'mail.poseidonvet.com',
+        'port'         => 465, // SSL
+        'username'     => 'notifications@poseidonvet.com',
+        'password'     => 'your-mailbox-password',
+        'from_address' => 'notifications@poseidonvet.com',
+        'from_name'    => 'Poseidon Vet',
+        // Inbox that receives new booking and order notifications.
+        'notify_to'    => 'info@poseidonvet.com',
+    ],
 ];
